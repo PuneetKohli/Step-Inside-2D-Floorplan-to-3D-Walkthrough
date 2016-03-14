@@ -1,9 +1,11 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
 using System.Collections;
 
 public class GridRenderer : MonoBehaviour {
 
     public GameObject gridLine;
+	public GameObject appContainer, gameContainer;
     Vector3 bottomLeft;
     Vector3 bottomRight;
     Vector3 topRight;
@@ -12,11 +14,16 @@ int gridSize = 1;
 
 	// Use this for initialization
 	void Start () {
-        Vector3 screenDimensions = CalculateScreenSizeInWorldCoords();
-        print("Screen height" + Screen.height);
-        float pxThickness = 1 / (Screen.height / (Camera.main.orthographicSize * 2));
-        print(pxThickness);
-        RenderLines(screenDimensions, pxThickness);
+
+		float xRatio = gameContainer.GetComponent<UIWidget>().width * 1.0f / appContainer.GetComponent<UIWidget>().width;
+		print (xRatio);
+		float yRatio = gameContainer.GetComponent<UIWidget>().height * 1.0f / appContainer.GetComponent<UIWidget>().height;
+		print (yRatio);
+		Vector3 screenDimensions = CalculateScreenSizeInWorldCoords(xRatio, yRatio);
+		print("Screen height" + Screen.height);
+		float pxThickness = 1 / (Screen.height / (Camera.main.orthographicSize * 2));
+		print(pxThickness);
+		RenderLines(screenDimensions, pxThickness);
     }
 	
 	// Update is called once per frame
@@ -56,12 +63,12 @@ int gridSize = 1;
         }
 
     }
-    Vector2 CalculateScreenSizeInWorldCoords()
+    Vector2 CalculateScreenSizeInWorldCoords(float xRatio, float yRatio)
     {
         Camera cam = Camera.main;
-        bottomLeft = cam.ViewportToWorldPoint(new Vector3(0, 0, cam.nearClipPlane)); //Bottom Left Point (0,0)
+        bottomLeft = cam.ViewportToWorldPoint(new Vector3(1-xRatio, 0, cam.nearClipPlane)); //Bottom Left Point (0,0)
         bottomRight = cam.ViewportToWorldPoint(new Vector3(1, 0, cam.nearClipPlane)); //Bottom Right Point (0,1)
-        topRight = cam.ViewportToWorldPoint(new Vector3(1, 1, cam.nearClipPlane)); //Top Right Point (1,1)
+        topRight = cam.ViewportToWorldPoint(new Vector3(1, yRatio, cam.nearClipPlane)); //Top Right Point (1,1)
         float width  = (bottomRight - bottomLeft).magnitude;
         float height  = (topRight - bottomRight).magnitude;
  
