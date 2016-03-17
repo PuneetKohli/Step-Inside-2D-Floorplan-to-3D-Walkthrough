@@ -3,9 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-public class WallNode : MonoBehaviour {
+public class Node : MonoBehaviour {
 
-    public List<GameObject> wallList = new List<GameObject>();
+    public List<GameObject> adjacentNodes = new List<GameObject>();
 
     // Use this for initialization
     void Start () {

@@ -29,15 +29,10 @@ int gridSize = 1;
         }
 
         float xRatio = gameContainer.GetComponent<UIWidget>().width * 1.0f / appContainer.GetComponent<UIWidget>().width;
-        print(xRatio);
         float yRatio = gameContainer.GetComponent<UIWidget>().height * 1.0f / appContainer.GetComponent<UIWidget>().height;
-        print(yRatio);
         Vector3 screenDimensions = CalculateScreenSizeInWorldCoords(xRatio, yRatio);
         float pxThickness = 1 / (Screen.height / (Camera.main.orthographicSize * 2));
-        print(pxThickness);
         RenderLines(screenDimensions, pxThickness);
-        print("Bottom left" + bottomLeft);
-        print("Bottom right" + bottomRight);
         GetComponent<BoxCollider>().size = screenDimensions;
         GetComponent<BoxCollider>().center = new Vector2(Mathf.Abs(screenLeft.x - bottomLeft.x) / 2, -(screenTop.y - topRight.y) / 2);
     }
@@ -59,9 +54,7 @@ int gridSize = 1;
     void RenderLines(Vector2 dimensions, float thickness)
     {
         Vector2 numberOfLines = new Vector2(Mathf.CeilToInt(dimensions.x), Mathf.CeilToInt(dimensions.y));
-        print("Number of lines : " + numberOfLines);
         float adjustY = Mathf.Abs((int)dimensions.y - dimensions.y) / 2 + 0.5f;
-        print("Adjust y" + adjustY);
         float adjustX = Mathf.Abs((int)dimensions.x - dimensions.x) / 2;
         
         //Generate line from top to bottom

@@ -23,10 +23,10 @@ public class DrawLine : MonoBehaviour
 
         tapRecognizer.gestureRecognizedEvent += (r) =>
         {
-            Debug.Log("tap recognizer fired: " + r);
+            //Debug.Log("tap recognizer fired: " + r);
             //print("Location of tap" + r.startTouchLocation());
             _initialPosition = GetCurrentMousePosition(r.startTouchLocation()).GetValueOrDefault();
-            print("vertex count is " + _vertextCount);
+            //print("vertex count is " + _vertextCount);
             _lineRenderer.SetPosition(_vertextCount - 1, _initialPosition);  //1 -> initial pos
             _lineRenderer.SetVertexCount(++_vertextCount); //count = 2
             isTapped = !isTapped;
