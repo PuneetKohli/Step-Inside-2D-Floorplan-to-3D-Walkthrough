@@ -61,13 +61,11 @@ public class DrawWall : MonoBehaviour {
 
     void handleOverlap(Vector3 position)
     {
-        print("Handling overlap position = " + position);
         Ray ray = Camera.main.ScreenPointToRay(position);
         RaycastHit hit;
-
+		wallList.Last ().gameObject.GetComponent<BoxCollider> ().enabled = false;
         if (Physics.Raycast(ray, out hit))
         {
-            print("Hit something -> "+ hit.collider.gameObject.name);
             if (hit.collider.gameObject.tag == "Wall")
             {
                 print("Now split wall for wall" + hit.collider.gameObject.name);
@@ -75,6 +73,7 @@ public class DrawWall : MonoBehaviour {
             }
             // raycast hit this gameobject
         }
+		wallList.Last().gameObject.GetComponent<BoxCollider> ().enabled = true;
     }
 
     void splitWall(GameObject wall)
@@ -82,9 +81,19 @@ public class DrawWall : MonoBehaviour {
         int wallIndex = wallList.IndexOf(wall);
         GameObject startNode = wall.GetComponent<Wall>().startNode;
         GameObject endNode = wall.GetComponent<Wall>().endNode;
-        instantiateWall(currentNode, endNode);
+
+		Vector3 scale = wall.transform.localScale;
+		int multiplier = 1;
+		if (scale.x < 0) {
+			multiplier = -1;
+		}
+
+        instantiateWall(currentNode, endNode, wall.transform.rotation, multiplier);
+
         wall.GetComponent<Wall>().endNode = currentNode;
-    }
+
+		wall.transform.localScale = new Vector3 (multiplier * Vector3.Distance(startNode.transform.position, wall.GetComponent<Wall> ().endNode.transform.position), scale.y, scale.z);
+	}
 
     void instantiateWall(Vector3 position)
     {
@@ -105,13 +114,15 @@ public class DrawWall : MonoBehaviour {
         wallList.Add(newWall);
     }
 
-    void instantiateWall(GameObject startNode, GameObject endNode)
+    void instantiateWall(GameObject startNode, GameObject endNode, Quaternion rotation, int multiplier)
     {
         newWall = GameObject.Instantiate(wallSprite);
         newWall.name = "Wall" + wallList.Count();
         newWall.transform.parent = wallContainer;
         newWall.transform.position = startNode.transform.position;
-        newWall.transform.localScale = endNode.transform.position - startNode.transform.position;
+		print ("Multiplier is " + multiplier);
+		newWall.transform.localScale = new Vector3(multiplier * Vector3.Distance(startNode.transform.position, endNode.transform.position), 0.2f, 1);
+		newWall.transform.rotation = rotation;
         Wall w = newWall.GetComponent<Wall>();
         w.startNode = startNode;
         w.endNode = endNode;
@@ -189,7 +200,6 @@ public class DrawWall : MonoBehaviour {
             
             if (currentNode.GetComponent<Node>().adjacentNodes.Count == 0 && !didDraw)
             {
-                Debug.Log("Pressed right click. New Wall is " + newWall);
                 nodeList.Remove(currentNode);
                 GameObject.Destroy(currentNode);
             }
@@ -211,4 +221,39 @@ public class DrawWall : MonoBehaviour {
 
         return null;
     }
+
+	float SignedAngleBetween(Vector3 a, Vector3 b, Vector3 n){
+		// angle in [0,180]
+		float angle = Vector3.Angle(a,b);
+		float sign = Mathf.Sign(Vector3.Dot(n,Vector3.Cross(a,b)));
+		
+		// angle in [-179,180]
+		float signed_angle = angle * sign;
+		
+		// angle in [0,360] (not used but included here for completeness)
+		float angle360 =  (signed_angle + 360) % 360;
+
+		return angle360;
+	}
+
+	float AngleDir(Vector3 a, Vector3 b, Vector3 forward) {
+		Vector3 perp = Vector3.Cross(a, b);
+		float dir = Vector3.Dot(perp, forward);
+
+		print ("DIR IS " + dir);
+		if (dir > 0f) {
+			return 1f;
+		} else if (dir < 0f) {
+			return -1f;
+		} else {
+			return 0f;
+		}
+	}
+
+	int directionSign(Vector3 a, Vector3 b)
+	{
+		int sign = Vector3.Cross(a, b).z < 0 ? -1 : 1;
+		print ("Direction sign is , " + sign);
+		return sign;
+	}
 }
