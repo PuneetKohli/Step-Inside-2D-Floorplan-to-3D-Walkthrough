@@ -7,7 +7,7 @@ public class DrawWall : MonoBehaviour {
 
     public GameObject wallSprite;
     public GameObject nodeSprite;
-    public Transform wallContainer, nodeContainer;
+	public Transform wallContainer, nodeContainer;
     GameObject newWall;
     GameObject initialNode, currentNode;
 
@@ -28,36 +28,48 @@ public class DrawWall : MonoBehaviour {
         TKTapRecognizer tapRecognizer = new TKTapRecognizer();
 
         tapRecognizer.gestureRecognizedEvent += (r) =>
-        {
-            Debug.Log("tap recognizer fired: " + r);
+		{
+			Debug.Log ("tap recognizer fired: " + r);
+			print ("The current mouse position is : " + GetCurrentMousePosition (r.startTouchLocation ()).GetValueOrDefault ());
+			if (gameObject.GetComponent<BoxCollider> ().bounds.Contains (transform.TransformPoint(GetCurrentMousePosition (r.startTouchLocation ()).GetValueOrDefault ()))) {
+				if (!isDrawing) {
+					didDraw = false;
+					isDrawing = true;
+					_initialPos = GetCurrentMousePosition (r.startTouchLocation ()).GetValueOrDefault ();
+					instantiateNode (_initialPos);
+				} else {
+					didDraw = true;
+					float newXpos = wallList.Last ().transform.position.x + wallList.Last ().transform.localScale.x * Mathf.Cos (_xRotation * Mathf.PI / 180f);
+					float newYpos = wallList.Last ().transform.position.y + wallList.Last ().transform.localScale.x * Mathf.Sin (_xRotation * Mathf.PI / 180f);
 
-            if (!isDrawing)
-            {
-                didDraw = false;
-                isDrawing = true;
-                _initialPos = GetCurrentMousePosition(r.startTouchLocation()).GetValueOrDefault();
-                instantiateNode(_initialPos);
-            }
-            else
-            {
-                didDraw = true;
-                float newXpos = wallList.Last().transform.position.x + wallList.Last().transform.localScale.x * Mathf.Cos(_xRotation * Mathf.PI / 180f);
-                float newYpos = wallList.Last().transform.position.y + wallList.Last().transform.localScale.x * Mathf.Sin(_xRotation * Mathf.PI / 180f);
+					newXpos = Mathf.Round (newXpos * 100) / 100f;
+					newYpos = Mathf.Round (newYpos * 100) / 100f;
 
-                newXpos = Mathf.Round(newXpos * 100) / 100f;
-                newYpos = Mathf.Round(newYpos * 100) / 100f;
+					Vector3 newPos = new Vector3 (newXpos, newYpos, 0);
+					_initialPos = newPos;
+					setPreviousWallEndNode ();
+					handleOverlap (r.startTouchLocation ());
+					//handleOverlap(wallList.Last())
+				}
 
-                Vector3 newPos = new Vector3(newXpos, newYpos, 0);
-                _initialPos = newPos;
-                setPreviousWallEndNode();
-                handleOverlap(r.startTouchLocation());
-            }
+				instantiateWall (_initialPos);
 
-            instantiateWall(_initialPos);
+			}
+			else
+			{
+				print ("Bound " + gameObject.GetComponent<BoxCollider>().bounds + " doesnt contain position");
+				removeDrawingWall();
+			}
+		};
 
-        };
         TouchKit.addGestureRecognizer(tapRecognizer);
     }
+
+	/*void handleOverlap(GameObject wall)
+	{
+		print ("" + wall.name);
+		Use Physics.OverlapBox in Unity 5.3 or above
+	}*/
 
     void handleOverlap(Vector3 position)
     {
@@ -164,30 +176,32 @@ public class DrawWall : MonoBehaviour {
         if (newWall != null && isDrawing)
         {
             _currentPos = GetCurrentMousePosition(Input.mousePosition).GetValueOrDefault();
+			if(gameObject.GetComponent<BoxCollider>().bounds.Contains(transform.TransformPoint(_currentPos)))
+			{
+            	Vector3 difference = _currentPos - _initialPos;
 
-            Vector3 difference = _currentPos - _initialPos;
+            	float newX = difference.magnitude; //The new X scale for the 
 
-            float newX = difference.magnitude; //The new X scale for the 
+            	if (difference.x < 0)
+            	{
+           	    	newX *= -1;
+				}
 
-            if (difference.x < 0)
-            {
-                newX *= -1;
-            }
+            	//Need to give new value of rotation for the wall script
+            	Quaternion newRotation = Quaternion.LookRotation(_initialPos - _currentPos, Vector3.up);
+            	newRotation.x = 0.0f;
+            	newRotation.y = 0.0f;
+            	_xRotation = Mathf.Round(newRotation.eulerAngles.z / 15) * 15;
+            	newRotation = Quaternion.Euler(newRotation.x, newRotation.y, _xRotation);
 
-            //Need to give new value of rotation for the wall script
-            Quaternion newRotation = Quaternion.LookRotation(_initialPos - _currentPos, Vector3.up);
-            newRotation.x = 0.0f;
-            newRotation.y = 0.0f;
-            _xRotation = Mathf.Round(newRotation.eulerAngles.z / 15) * 15;
-            newRotation = Quaternion.Euler(newRotation.x, newRotation.y, _xRotation);
+            	//wallList.Last().transform.rotation = newRotation;
+            	newWall.transform.rotation = newRotation;
 
-            //wallList.Last().transform.rotation = newRotation;
-            newWall.transform.rotation = newRotation;
-
-            //wallList.Last().transform.localScale = new Vector3(newX, wallList.Last().transform.localScale.y, wallList.Last().transform.localScale.z);
-            //newX = Mathf.Round(newX * 0.5f) / 0.5f;
-            Vector3 newScale = new Vector3(newX, newWall.transform.localScale.y, newWall.transform.localScale.z);
-            newWall.transform.localScale = newScale;
+            	//wallList.Last().transform.localScale = new Vector3(newX, wallList.Last().transform.localScale.y, wallList.Last().transform.localScale.z);
+            	//newX = Mathf.Round(newX * 0.5f) / 0.5f;
+            	Vector3 newScale = new Vector3(newX, newWall.transform.localScale.y, newWall.transform.localScale.z);
+            	newWall.transform.localScale = newScale;
+			}
         }
     }
 
@@ -195,18 +209,24 @@ public class DrawWall : MonoBehaviour {
     {
         if (Input.GetMouseButtonDown(1))
         {
-            wallList.Remove(newWall);
-            GameObject.DestroyImmediate(newWall);
-            
-            if (currentNode.GetComponent<Node>().adjacentNodes.Count == 0 && !didDraw)
-            {
-                nodeList.Remove(currentNode);
-                GameObject.Destroy(currentNode);
-            }
-            isDrawing = false;
-            currentNode = null;
+			removeDrawingWall();
         }
     }
+
+	private void removeDrawingWall()
+	{
+		if (currentNode != null) {
+			wallList.Remove (newWall);
+			GameObject.DestroyImmediate (newWall);
+		
+			if (currentNode.GetComponent<Node> ().adjacentNodes.Count == 0 && !didDraw) {
+				nodeList.Remove (currentNode);
+				GameObject.Destroy (currentNode);
+			}
+			isDrawing = false;
+			currentNode = null;
+		}
+	}
 
     private Vector3? GetCurrentMousePosition(Vector3 screenPosition)
     {
@@ -255,5 +275,10 @@ public class DrawWall : MonoBehaviour {
 		int sign = Vector3.Cross(a, b).z < 0 ? -1 : 1;
 		print ("Direction sign is , " + sign);
 		return sign;
+	}
+
+	List<GameObject> exportNodes()
+	{
+		return nodeList;		
 	}
 }
