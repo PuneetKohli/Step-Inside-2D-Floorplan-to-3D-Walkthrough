@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-public class DrawWall : MonoBehaviour {
+public class WallManager : MonoBehaviour {
 
     public GameObject wallSprite;
     public GameObject nodeSprite;
@@ -29,8 +29,7 @@ public class DrawWall : MonoBehaviour {
 
         tapRecognizer.gestureRecognizedEvent += (r) =>
 		{
-			Debug.Log ("tap recognizer fired: " + r);
-			print ("The current mouse position is : " + GetCurrentMousePosition (r.startTouchLocation ()).GetValueOrDefault ());
+			//Debug.Log ("tap recognizer fired: " + r);
 			if (gameObject.GetComponent<BoxCollider> ().bounds.Contains (transform.TransformPoint(GetCurrentMousePosition (r.startTouchLocation ()).GetValueOrDefault ()))) {
 				if (!isDrawing) {
 					didDraw = false;
@@ -48,8 +47,7 @@ public class DrawWall : MonoBehaviour {
 					Vector3 newPos = new Vector3 (newXpos, newYpos, 0);
 					_initialPos = newPos;
 					setPreviousWallEndNode ();
-					handleOverlap (r.startTouchLocation ());
-					//handleOverlap(wallList.Last())
+                    handleOverlap(wallList.Last());
 				}
 
 				instantiateWall (_initialPos);
@@ -65,47 +63,60 @@ public class DrawWall : MonoBehaviour {
         TouchKit.addGestureRecognizer(tapRecognizer);
     }
 
-	/*void handleOverlap(GameObject wall)
+	void handleOverlap(GameObject wall)
 	{
-		print ("" + wall.name);
-		Use Physics.OverlapBox in Unity 5.3 or above
-	}*/
+        int count = wallList.Count - 1;
 
-    void handleOverlap(Vector3 position)
-    {
-        Ray ray = Camera.main.ScreenPointToRay(position);
-        RaycastHit hit;
-		wallList.Last ().gameObject.GetComponent<BoxCollider> ().enabled = false;
-        if (Physics.Raycast(ray, out hit))
+        Dictionary<GameObject, Vector> wallsToSplit = new Dictionary<GameObject, Vector>();
+
+        for (int i = 0; i < count; i++)
         {
-            if (hit.collider.gameObject.tag == "Wall")
-            {
-                print("Now split wall for wall" + hit.collider.gameObject.name);
-                splitWall(hit.collider.gameObject);
+            if(wall.GetComponent<Wall>().startNode != wallList[i].GetComponent<Wall>().endNode)
+            { 
+                Vector intersectionPoint = new Vector();
+                Vector p1 = new Vector(wall.GetComponent<Wall>().startNode.transform.position.x, wall.GetComponent<Wall>().startNode.transform.position.y);
+                Vector p2 = new Vector(wall.GetComponent<Wall>().endNode.transform.position.x, wall.GetComponent<Wall>().endNode.transform.position.y);
+
+                Vector q1 = new Vector(wallList[i].GetComponent<Wall>().startNode.transform.position.x, wallList[i].GetComponent<Wall>().startNode.transform.position.y);
+                Vector q2 = new Vector(wallList[i].GetComponent<Wall>().endNode.transform.position.x, wallList[i].GetComponent<Wall>().endNode.transform.position.y);
+                if (LineSegementsIntersect(p1, p2, q1, q2, out intersectionPoint, true))
+                {
+                    print("Wall " + wall.name + " Overlaps with " + wallList[i] + " at point " + intersectionPoint.X + " " + intersectionPoint.Y);
+                    if(!double.IsNaN(intersectionPoint.X) || !double.IsNaN(intersectionPoint.Y))
+                    {
+                        wallsToSplit.Add(wallList[i], intersectionPoint);
+                    }
+                }
             }
-            // raycast hit this gameobject
         }
-		wallList.Last().gameObject.GetComponent<BoxCollider> ().enabled = true;
+
+        for (int index = 0; index < wallsToSplit.Count; index++)
+        {
+            var item = wallsToSplit.ElementAt(index);
+            print("splitting wall " + item.Key + " At position " + (float) item.Value.X + " " + (float) item.Value.Y);
+            splitWall(item.Key, new Vector3((float)item.Value.X, (float)item.Value.Y, 0));
+        }
     }
 
-    void splitWall(GameObject wall)
+    void splitWall(GameObject wall, Vector3 position)
     {
-        int wallIndex = wallList.IndexOf(wall);
+        GameObject newNode = instantiateIntersectionNode(position);
         GameObject startNode = wall.GetComponent<Wall>().startNode;
         GameObject endNode = wall.GetComponent<Wall>().endNode;
 
-		Vector3 scale = wall.transform.localScale;
-		int multiplier = 1;
-		if (scale.x < 0) {
-			multiplier = -1;
-		}
+        Vector3 scale = wall.transform.localScale;
+        int multiplier = 1;
+        if (scale.x < 0)
+        {
+            multiplier = -1;
+        }
 
-        instantiateWall(currentNode, endNode, wall.transform.rotation, multiplier);
+        instantiateWall(newNode, endNode, wall.transform.rotation, multiplier);
 
-        wall.GetComponent<Wall>().endNode = currentNode;
+        wall.GetComponent<Wall>().endNode = newNode;
 
-		wall.transform.localScale = new Vector3 (multiplier * Vector3.Distance(startNode.transform.position, wall.GetComponent<Wall> ().endNode.transform.position), scale.y, scale.z);
-	}
+        wall.transform.localScale = new Vector3(multiplier * Vector3.Distance(startNode.transform.position, wall.GetComponent<Wall>().endNode.transform.position), scale.y, scale.z);
+    }
 
     void instantiateWall(Vector3 position)
     {
@@ -113,7 +124,7 @@ public class DrawWall : MonoBehaviour {
         newWall.name = "Wall" + wallList.Count();
         newWall.transform.parent = wallContainer;
         newWall.transform.position = _initialPos;
-        newWall.GetComponent<BoxCollider>().enabled = false;
+        //newWall.GetComponent<BoxCollider>().enabled = false;
         Wall w = newWall.GetComponent<Wall>();
         if (currentNode == null)
         {
@@ -132,14 +143,13 @@ public class DrawWall : MonoBehaviour {
         newWall.name = "Wall" + wallList.Count();
         newWall.transform.parent = wallContainer;
         newWall.transform.position = startNode.transform.position;
-		print ("Multiplier is " + multiplier);
-		newWall.transform.localScale = new Vector3(multiplier * Vector3.Distance(startNode.transform.position, endNode.transform.position), 0.2f, 1);
+
+        newWall.transform.localScale = new Vector3(multiplier * Vector3.Distance(startNode.transform.position, endNode.transform.position), 0.2f, 1);
 		newWall.transform.rotation = rotation;
         Wall w = newWall.GetComponent<Wall>();
         w.startNode = startNode;
         w.endNode = endNode;
         wallList.Add(newWall);
-
     }
 
     GameObject instantiateNode(Vector3 position)
@@ -161,11 +171,24 @@ public class DrawWall : MonoBehaviour {
         return newNode;
     }
 
+    GameObject instantiateIntersectionNode(Vector3 position)
+    {
+        GameObject newNode = GameObject.Instantiate(nodeSprite);
+        newNode.transform.position = position;
+        newNode.transform.parent = nodeContainer;
+        newNode.name = "Node " + nodeList.Count();
+        
+        nodeList.Add(newNode);
+        
+        return newNode;
+    }
+
+
+
     void setPreviousWallEndNode()
     {
         wallList.Last().GetComponent<Wall>().endNode = instantiateNode(_initialPos);
-        wallList.Last().GetComponent<BoxCollider>().enabled = true;
-
+        //wallList.Last().GetComponent<BoxCollider>().enabled = true;
     }
 
     // Update is called once per frame
@@ -242,43 +265,70 @@ public class DrawWall : MonoBehaviour {
         return null;
     }
 
-	float SignedAngleBetween(Vector3 a, Vector3 b, Vector3 n){
-		// angle in [0,180]
-		float angle = Vector3.Angle(a,b);
-		float sign = Mathf.Sign(Vector3.Dot(n,Vector3.Cross(a,b)));
-		
-		// angle in [-179,180]
-		float signed_angle = angle * sign;
-		
-		// angle in [0,360] (not used but included here for completeness)
-		float angle360 =  (signed_angle + 360) % 360;
-
-		return angle360;
-	}
-
-	float AngleDir(Vector3 a, Vector3 b, Vector3 forward) {
-		Vector3 perp = Vector3.Cross(a, b);
-		float dir = Vector3.Dot(perp, forward);
-
-		print ("DIR IS " + dir);
-		if (dir > 0f) {
-			return 1f;
-		} else if (dir < 0f) {
-			return -1f;
-		} else {
-			return 0f;
-		}
-	}
-
-	int directionSign(Vector3 a, Vector3 b)
-	{
-		int sign = Vector3.Cross(a, b).z < 0 ? -1 : 1;
-		print ("Direction sign is , " + sign);
-		return sign;
-	}
-
-	List<GameObject> exportNodes()
+	public List<GameObject> exportNodes()
 	{
 		return nodeList;		
 	}
+    /// <summary>
+    /// Test whether two line segments intersect. If so, calculate the intersection point.
+    /// <see cref="http://stackoverflow.com/a/14143738/292237"/>
+    /// </summary>
+    /// <param name="p">Vector to the start point of p.</param>
+    /// <param name="p2">Vector to the end point of p.</param>
+    /// <param name="q">Vector to the start point of q.</param>
+    /// <param name="q2">Vector to the end point of q.</param>
+    /// <param name="intersection">The point of intersection, if any.</param>
+    /// <param name="considerOverlapAsIntersect">Do we consider overlapping lines as intersecting?
+    /// </param>
+    /// <returns>True if an intersection point was found.</returns>
+    public static bool LineSegementsIntersect(Vector p, Vector p2, Vector q, Vector q2,
+        out Vector intersection, bool considerCollinearOverlapAsIntersect = false)
+    {
+        intersection = new Vector();
+
+        var r = p2 - p;
+        var s = q2 - q;
+        var rxs = r.Cross(s);
+        var qpxr = (q - p).Cross(r);
+
+        // If r x s = 0 and (q - p) x r = 0, then the two lines are collinear.
+        if (rxs.IsZero() && qpxr.IsZero())
+        {
+            // 1. If either  0 <= (q - p) * r <= r * r or 0 <= (p - q) * s <= * s
+            // then the two lines are overlapping,
+            if (considerCollinearOverlapAsIntersect)
+                if ((0 <= (q - p) * r && (q - p) * r <= r * r) || (0 <= (p - q) * s && (p - q) * s <= s * s))
+                    return true;
+
+            // 2. If neither 0 <= (q - p) * r = r * r nor 0 <= (p - q) * s <= s * s
+            // then the two lines are collinear but disjoint.
+            // No need to implement this expression, as it follows from the expression above.
+            return false;
+        }
+
+        // 3. If r x s = 0 and (q - p) x r != 0, then the two lines are parallel and non-intersecting.
+        if (rxs.IsZero() && !qpxr.IsZero())
+            return false;
+
+        // t = (q - p) x s / (r x s)
+        var t = (q - p).Cross(s) / rxs;
+
+        // u = (q - p) x r / (r x s)
+
+        var u = (q - p).Cross(r) / rxs;
+
+        // 4. If r x s != 0 and 0 <= t <= 1 and 0 <= u <= 1
+        // the two line segments meet at the point p + t r = q + u s.
+        if (!rxs.IsZero() && (0 <= t && t <= 1) && (0 <= u && u <= 1))
+        {
+            // We can calculate the intersection point using either t or u.
+            intersection = p + t * r;
+
+            // An intersection was found.
+            return true;
+        }
+
+        // 5. Otherwise, the two line segments are not parallel but do not intersect.
+        return false;
+    }
 }
