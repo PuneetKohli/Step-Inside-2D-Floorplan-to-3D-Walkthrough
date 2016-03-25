@@ -50,6 +50,11 @@ public class WallGenerator : MonoBehaviour {
 		List<GameObject>[] node_values = nodes.Values.ToArray ();
 		Vector3[] node_points = nodes.Keys.ToArray ();
 		walls [2].GetComponent<WallFunctions> ().addHole ();
+
+		Vector3[] m = walls [1].GetComponent<MeshFilter> ().mesh.normals;
+		for (int i = 0; i < m.Length; i++)
+			Debug.Log (m[i]);
+		
 		for (int i = 0; i < node_values.Count(); i++) {
 			GameObject[] coincident_walls = node_values [i].ToArray (); 
 			for (int j = 0; j < coincident_walls.Length; j++) {
@@ -70,17 +75,17 @@ public class WallGenerator : MonoBehaviour {
 				coincident_walls = coincident_walls.OrderByDescending (w => w.GetComponent<WallFunctions> ().Angle).ToArray();
 
 			alternator = false;
-			Debug.Log ("Point : " + node_points [i]);
+			//Debug.Log ("Point : " + node_points [i]);
 			if (coincident_walls.Length > 1) {
 				for (int j = 0; j < coincident_walls.Length; j++) {
-					Debug.Log (coincident_walls [j].name + " : " + coincident_walls [j].GetComponent<WallFunctions>().Angle + ", " + coincident_walls [(j + 1)  % coincident_walls.Length].name + " : " + coincident_walls [(j + 1)  % coincident_walls.Length].GetComponent<WallFunctions>().Angle);
+					//Debug.Log (coincident_walls [j].name + " : " + coincident_walls [j].GetComponent<WallFunctions>().Angle + ", " + coincident_walls [(j + 1)  % coincident_walls.Length].name + " : " + coincident_walls [(j + 1)  % coincident_walls.Length].GetComponent<WallFunctions>().Angle);
 					alternator = !alternator;
 					adjustShape (coincident_walls [j], coincident_walls [(j + 1) % coincident_walls.Length], node_points [i]);
 				}
 			}
 		}
 
-
+	
 	}
 
 	//draw corner points using gizmos 
@@ -121,7 +126,7 @@ public class WallGenerator : MonoBehaviour {
 		if (angle < -180) {
 			angle = - (angle + 180);
 		}
-		Debug.Log (angle);
+		//Debug.Log (angle);
 
 		Mesh meshA = a.GetComponent<MeshFilter> ().mesh;
 		Mesh meshB = b.GetComponent<MeshFilter> ().mesh;
@@ -133,7 +138,7 @@ public class WallGenerator : MonoBehaviour {
 
 		float ext = (thickness / 2) / Mathf.Tan (angle * Mathf.Deg2Rad/ 2);
 
-		Debug.Log (ext);
+		//Debug.Log (ext);
 		//if (Mathf.Abs (angle) > 90)
 		//	ext = -ext;
 	

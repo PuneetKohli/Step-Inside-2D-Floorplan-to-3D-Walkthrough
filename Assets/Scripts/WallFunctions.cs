@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Poly2Tri;
+using System;
 
 public class WallFunctions : MonoBehaviour {
 
@@ -76,8 +77,10 @@ public class WallFunctions : MonoBehaviour {
 
 		//extrude mesh
 		mesh = this.extrudeWall(mesh);
+		mesh.RecalculateNormals();
 
 		//adjust wall parameters
+
 
 		//assign material
 		Material newMat = Resources.Load("meshgen material", typeof(Material)) as Material;
@@ -123,9 +126,10 @@ public class WallFunctions : MonoBehaviour {
 		mesh.vertices = new_verts.ToArray ();
 		mesh.triangles = new_tris.ToArray ();
 
-		Debug.Log ("First vertex " + mesh.vertices [0]);
+		//Debug.Log ("First vertex " + mesh.vertices [0]);
 
 		mesh = this.extrudeWall(mesh);
+
 	}
 
 	private Polygon createPoly(Vector2[] points) {
@@ -216,6 +220,7 @@ public class WallFunctions : MonoBehaviour {
 		int[] triangles = {a, c, b, a, d, c};
 		return triangles;
 	}
+
 
 	// Use this for initialization
 	void Start () {
