@@ -20,17 +20,22 @@ public class HouseObject : MonoBehaviour {
 	
 	}
 
-    void makeNotPlacable()
+    void MakeNotPlacable()
     {
         print("Objct is unplacable");
         background.GetComponent<Renderer>().material.color = notPlacable;
         isPlacable = false;
     }
 
-    void makePlacable()
+    void MakePlacable()
     {
         print("Object is placable");
         background.GetComponent<Renderer>().material.color = placable;
         isPlacable = true;
+    }
+
+    void PlaceObject()
+    {
+        background.GetComponent<Renderer>().material.color = Color.white;
     }
 }

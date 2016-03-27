@@ -6,22 +6,33 @@ using System.Linq;
 public class SubmenuDragDropItem : UIDragDropItem
 {
     public GameObject prefab;
+    Transform houseObjectContainer;
     public LayerMask layerMask;
     GameObject realWorldItem = null;
+    GameObject gameContainer;
     bool isDragging = false;
+
+    Transform originalParent = null;
 
     protected override void OnDragDropStart()
     {
         print("Drag drop started");
+        gameContainer = GameObject.Find("2DManager");
+        houseObjectContainer = GameObject.Find("HouseObjectContainer").transform;
         this.isDragging = true;
         base.OnDragDropStart();
         this.realWorldItem = GameObject.Instantiate(prefab);
+        this.realWorldItem.transform.parent = houseObjectContainer;
+        print("Path is " + "furniture/2D_Iso/" + "chair" + "/" + originalParent.name);
 
+        this.realWorldItem.GetComponent<Renderer>().material.mainTexture = Resources.Load("furniture/2D_Iso/" + "chair" + "/" + originalParent.name) as Texture2D;
     }
 
     protected override void OnClone(GameObject original)
     {
+        originalParent = original.transform.parent;
         print("clone created");
+        this.transform.localScale = Vector3.zero;
         base.OnClone(original);
     }
 
@@ -31,7 +42,7 @@ public class SubmenuDragDropItem : UIDragDropItem
         this.isDragging = true;
         base.OnDragStart();
     }
-    
+
     protected override void OnDragEnd()
     {
         print("Ended");
@@ -44,36 +55,35 @@ public class SubmenuDragDropItem : UIDragDropItem
     {
         print("Drop ended");
         this.isDragging = false;
+        if (realWorldItem != null)
+        {
+            if (!realWorldItem.GetComponent<HouseObject>().isPlacable)
+            {
+                GameObject.Destroy(realWorldItem);
+            }
+            else
+            {
+                realWorldItem.transform.position = new Vector3(realWorldItem.transform.position.x, realWorldItem.transform.position.y, -10);
+
+                if (!gameContainer.GetComponent<BoxCollider>().bounds.Intersects(realWorldItem.GetComponent<Renderer>().bounds))
+                {
+                    GameObject.Destroy(realWorldItem);
+                }
+                else
+                {
+                    realWorldItem.transform.position = new Vector3(realWorldItem.transform.position.x, realWorldItem.transform.position.y, 0);
+                    realWorldItem.SendMessage("PlaceObject");
+                }
+            }
+        }
         base.OnDragDropEnd();
     }
 
     protected override void OnDrag(Vector2 delta)
     {
         handleDrag();
-    }
-
-    /*protected override void OnDrag(Vector2 delta)
-    {
-        print("Dragging with current mouse position " + GetCurrentMousePosition(Input.mousePosition).GetValueOrDefault());
-        print("But dragged object position is " + transform.position + " With extents " + transform.GetComponent<BoxCollider>().size);
-        print("REal world item is " + realWorldItem);
-        if (realWorldItem != null)
-        {
-            print("I have the item!");
-            realWorldItem.transform.position = GetCurrentMousePosition(Input.mousePosition).GetValueOrDefault();
-        }
-        RaycastHit hit = new RaycastHit();
-
-        //Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        RaycastHit[] hit2 = Physics.BoxCastAll(GetCurrentMousePosition(Input.mousePosition).GetValueOrDefault(), transform.GetComponent<BoxCollider>().bounds.extents, Vector3.forward);
-        if (hit2.Length > 0)
-        {
-            print("Box has Hit " + hit2[0]);
-           // hit.transform.gameObject.SendMessage("HandleInput");
-        }
         base.OnDrag(delta);
     }
-   */
 
     void handleDrag()
     {
@@ -85,30 +95,43 @@ public class SubmenuDragDropItem : UIDragDropItem
             RaycastHit[] hitList = Physics.BoxCastAll(GetCurrentMousePosition(Input.mousePosition).GetValueOrDefault(), realWorldItem.GetComponent<Renderer>().bounds.extents * 1.1f, Vector3.forward, transform.rotation, float.PositiveInfinity, layerMask);
             if (hitList.Length > 0)
             {
-                realWorldItem.SendMessage("makeNotPlacable");
-                for (int i = 0; i < hitList.Length; i++)
+                realWorldItem.SendMessage("MakeNotPlacable");
+                /*for (int i = 0; i < hitList.Length; i++)
                 {
                     print("Hit with object " + hitList[i].transform.name);
-                }
+                }*/
             }
             else
             {
-                realWorldItem.SendMessage("makePlacable");
+                realWorldItem.SendMessage("MakePlacable");
             }
         }
     }
+
     protected override void Update()
     {
-        if(this.isDragging)
-        { 
+        if (this.isDragging)
+        {
             if (Input.GetKeyDown(KeyCode.R) && realWorldItem != null)
             {
                 print("Hit key R" + realWorldItem);
                 realWorldItem.transform.Rotate(Vector3.forward, 90f);
             }
         }
-        //if(GetCurrentMousePosition(Input.mousePosition).GetValueOrDefault())
+        detectRightClick();
+
         base.Update();
+    }
+
+    void detectRightClick()
+    {
+        if (Input.GetMouseButtonDown(1))
+        {
+            if (realWorldItem != null)
+            {
+                Destroy(realWorldItem);
+            }
+        }
     }
 
     private Vector3? GetCurrentMousePosition(Vector3 screenPosition)

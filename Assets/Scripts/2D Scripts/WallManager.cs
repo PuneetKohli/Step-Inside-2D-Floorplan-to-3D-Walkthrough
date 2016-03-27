@@ -55,7 +55,6 @@ public class WallManager : MonoBehaviour {
 			}
 			else
 			{
-				print ("Bound " + gameObject.GetComponent<BoxCollider>().bounds + " doesnt contain position");
 				removeDrawingWall();
 			}
 		};
@@ -104,6 +103,10 @@ public class WallManager : MonoBehaviour {
         GameObject startNode = wall.GetComponent<Wall>().startNode;
         GameObject endNode = wall.GetComponent<Wall>().endNode;
 
+        /*startNode.GetComponent<Node>().adjacentNodes.Remove(endNode);
+        startNode.GetComponent<Node>().adjacentNodes.Add(newNode);
+        newNode.GetComponent<Node>().adjacentNodes.Add(endNode);*/
+
         Vector3 scale = wall.transform.localScale;
         int multiplier = 1;
         if (scale.x < 0)
@@ -116,7 +119,10 @@ public class WallManager : MonoBehaviour {
         wall.GetComponent<Wall>().endNode = newNode;
 
         wall.transform.localScale = new Vector3(multiplier * Vector3.Distance(startNode.transform.position, wall.GetComponent<Wall>().endNode.transform.position), scale.y, scale.z);
+
     }
+
+
 
     void instantiateWall(Vector3 position)
     {
@@ -154,18 +160,25 @@ public class WallManager : MonoBehaviour {
 
     GameObject instantiateNode(Vector3 position)
     {
-        GameObject newNode = GameObject.Instantiate(nodeSprite);
-        newNode.transform.position = position;
-        newNode.transform.parent = nodeContainer;
-        newNode.name = "Node " + nodeList.Count();
-        if (currentNode != null)
+        GameObject newNode = NormalizeNodeAtPoint(position);
+        if (newNode == null)
         {
-            currentNode.GetComponent<Node>().adjacentNodes.Add(newNode);
+            newNode = GameObject.Instantiate(nodeSprite);
+            newNode.transform.position = position;
+            newNode.transform.parent = nodeContainer;
+            newNode.name = "Node " + nodeList.Count();
+            nodeList.Add(newNode);
         }
-        nodeList.Add(newNode);
         if (!didDraw)
         {
             initialNode = newNode;
+        }
+        if (currentNode != null)
+        {
+            if (newNode != currentNode)
+            {
+                currentNode.GetComponent<Node>().adjacentNodes.Add(newNode);
+            }
         }
         currentNode = newNode;
         return newNode;
@@ -173,16 +186,34 @@ public class WallManager : MonoBehaviour {
 
     GameObject instantiateIntersectionNode(Vector3 position)
     {
-        GameObject newNode = GameObject.Instantiate(nodeSprite);
-        newNode.transform.position = position;
-        newNode.transform.parent = nodeContainer;
-        newNode.name = "Node " + nodeList.Count();
+        GameObject newNode = NormalizeNodeAtPoint(position);
+        if(newNode == null)
+        { 
+            newNode = GameObject.Instantiate(nodeSprite);
+            newNode.transform.position = position;
+            newNode.transform.parent = nodeContainer;
+            newNode.name = "Node " + nodeList.Count();
         
-        nodeList.Add(newNode);
-        
+            nodeList.Add(newNode);
+        }
+        print("Instantiating intersection node with name " + newNode.name);
+
         return newNode;
     }
 
+    GameObject NormalizeNodeAtPoint(Vector3 position)
+    {
+        print("Normalizing");
+        for (int i = 0; i < nodeList.Count; i++)
+        {
+            if (nodeList[i].GetComponent<Renderer>().bounds.Contains(position))
+            {
+                print("Overlap with node " + nodeList[i]);
+                return nodeList[i];
+            }
+        }
+        return null;
+    }
 
 
     void setPreviousWallEndNode()

@@ -1,23 +1,28 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 public class MainMenuScrollView : MonoBehaviour {
 
 	public UIAtlas appUIAtlas;
 	public GameObject mainMenuItem;
-	string[] itemNames = new string[] { "cupboard", "table", "bed", "chair", "sofa", "lamp", "sink" };
+    ClickManager clickManager;
+
 	// Use this for initialization
 	void Start () {
-		foreach (string item in itemNames) {
+        clickManager = GameObject.Find("2DManager").GetComponent<ClickManager>();
+
+		foreach (string item in clickManager.itemNames) {
 			GameObject go = NGUITools.AddChild(gameObject, mainMenuItem);
+            go.name = item;
 			go.GetComponentInChildren<UILabel>().text = item.ToUpper() + "S";
 			go.GetComponentInChildren<UISprite>().atlas = appUIAtlas;  
 			go.transform.GetChild(1).GetComponent<UISprite>().spriteName = item; 
 		}
 		GetComponent<UIGrid> ().Reposition ();
 	}
-	
+
 	// Update is called once per frame
 	void Update () {
 	
