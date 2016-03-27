@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using Poly2Tri;
 using System;
 
-public class WallFunctions : MonoBehaviour {
+public class WallTest : MonoBehaviour {
 
 	public float thickness = 0.2f;
 	public float height = 5f;
@@ -79,7 +79,7 @@ public class WallFunctions : MonoBehaviour {
 
 		//extrude mesh
 		mesh = this.extrudeWall(mesh);
-		mesh.RecalculateNormals();
+		//mesh.RecalculateNormals();
 
 		//adjust wall parameters
 
@@ -134,7 +134,6 @@ public class WallFunctions : MonoBehaviour {
 		//Debug.Log ("First vertex " + mesh.vertices [0]);
 
 		mesh = this.extrudeWall(mesh);
-		mesh.RecalculateNormals ();
 
 	}
 
@@ -268,11 +267,13 @@ public class WallFunctions : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		
+		this.generateWall (new Vector3(0, 0, 0), new Vector3(0, 0, 5));
+		this.addHole ();
+		this.GetComponent<MeshFilter>().mesh.RecalculateNormals();
 	}
 
 	// Update is called once per frame
 	void Update () {
-
+		
 	}
 }

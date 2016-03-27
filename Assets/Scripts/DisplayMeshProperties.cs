@@ -9,11 +9,12 @@ public class DisplayMeshProperties : MonoBehaviour {
 		Vector3[] verts = m.vertices;
 		Vector3[] normals = m.normals;
 
-		Vector3[] looper = normals;
+		Vector3[] looper = verts;
 
 		for (int i = 0; i < looper.Length; i++) {
 			Debug.Log (looper [i]);
 		}
+
 	}
 	
 	// Update is called once per frame
