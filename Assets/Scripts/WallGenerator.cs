@@ -114,7 +114,7 @@ public class WallGenerator : MonoBehaviour {
 		}
 
 		if (angle < -180) {
-			angle = - (angle + 180);
+			angle = (angle + 180);
 		}
 		//Debug.Log (angle);
 
