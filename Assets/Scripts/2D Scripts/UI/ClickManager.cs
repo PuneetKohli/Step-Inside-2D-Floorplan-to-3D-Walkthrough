@@ -41,12 +41,15 @@ WallManager wallManager;
     public void clicked3DView()
     {
         print("3d view!");
-        print(wallManager.exportNodes().Count);
         _3DRoot.SetActive(true);
-        wallGenerator.generate3D(wallManager.exportNodes());
+        wallGenerator.generate3D(wallManager.exportNodes(), wallManager.exportWindows());
         _2DRoot.SetActive(false);
     }
 
+    public void ClickedSave()
+    {
+        wallManager.exportWindows();
+    }
     public void ClickedMainMenuItem(string itemName)
     {
         int index = IndexOfItem(itemName);

@@ -13,6 +13,9 @@ public class WallManager : MonoBehaviour {
 
     public List<GameObject> nodeList = new List<GameObject>();
     public List<GameObject> wallList = new List<GameObject>();
+    public List<GameObject> windowList = new List<GameObject>();
+    public List<GameObject> houseObjectList = new List<GameObject>();
+
     private Vector3 _initialPos, _currentPos;
     private float _xRotation;
     public bool isDrawing = false; //This is used to determine whether the user has stopped drawing (right click) and perform necessary action
@@ -302,6 +305,37 @@ public class WallManager : MonoBehaviour {
 	{
 		return nodeList;		
 	}
+
+    public List<GameObject> exportWindows()
+    {
+
+            //(GetComponent<Renderer>().bounds.center, GetComponent<Renderer>().bounds.extents * 1.1f, Vector3.forward, transform.rotation, float.PositiveInfinity, layerMask);
+
+        for (int i = 0; i < windowList.Count; i++)
+        {
+            RaycastHit[] hitList = Physics.RaycastAll(transform.TransformPoint(windowList[i].transform.position), Vector3.forward);
+
+            int correctWallIndex = -1;
+
+            for (int j = 0; j < hitList.Length; j++)
+            {
+                print("The ray hit" + hitList[j].transform.name);
+                if (hitList[j].transform.name.Contains("Wall"))
+                {
+                    if(Mathf.Approximately(hitList[j].transform.rotation.eulerAngles.z, windowList[i].transform.rotation.eulerAngles.z))
+                    { 
+                        correctWallIndex = j;
+                    }
+                    break;
+                }
+            }
+            
+            WallAttachableObject w = windowList[i].GetComponent<WallAttachableObject>();
+            w.startNode = hitList[correctWallIndex].transform.GetComponent<Wall>().startNode;
+            w.endNode = hitList[correctWallIndex].transform.GetComponent<Wall>().endNode;
+        }
+        return windowList;
+    }
     /// <summary>
     /// Test whether two line segments intersect. If so, calculate the intersection point.
     /// <see cref="http://stackoverflow.com/a/14143738/292237"/>

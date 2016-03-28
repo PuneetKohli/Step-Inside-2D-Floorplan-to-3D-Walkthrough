@@ -45,7 +45,7 @@ public class WallGenerator : MonoBehaviour {
 		return point_pairs.ToArray ();
 	}
 
-    public void generate3D(List<GameObject> nodeList)
+    public void generate3D(List<GameObject> nodeList, List<GameObject> windowList)
     {
         point_pairs_array = initPointPairsFromNodes(nodeList);
         generateWalls();
