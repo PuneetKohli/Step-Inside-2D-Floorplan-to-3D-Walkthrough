@@ -38,4 +38,15 @@ public class HouseObject : MonoBehaviour {
     {
         background.GetComponent<Renderer>().material.color = Color.white;
     }
+
+    public void init(string category, string name)
+    {
+        GetComponent<Renderer>().material.mainTexture = Resources.Load("furniture/2D_Iso/" + category + "/" + name) as Texture2D;
+        float height = GetComponent<Renderer>().material.mainTexture.height;
+        float width = GetComponent<Renderer>().material.mainTexture.width;
+        float aspect = height / width;
+        transform.localScale = new Vector3(2f, 2 * aspect, 1f);
+
+
+    }
 }

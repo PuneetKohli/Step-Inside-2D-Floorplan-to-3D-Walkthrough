@@ -284,15 +284,17 @@ public class WallManager : MonoBehaviour {
 
     private Vector3? GetCurrentMousePosition(Vector3 screenPosition)
     {
-        var ray = Camera.main.ScreenPointToRay(screenPosition);
-        var plane = new Plane(Vector3.forward, Vector3.zero);
+        if(Camera.main != null)
+        { 
+            var ray = Camera.main.ScreenPointToRay(screenPosition);
+            var plane = new Plane(Vector3.forward, Vector3.zero);
 
-        float rayDistance;
-        if (plane.Raycast(ray, out rayDistance))
-        {
-            return ray.GetPoint(rayDistance);
+            float rayDistance;
+            if (plane.Raycast(ray, out rayDistance))
+            {
+                return ray.GetPoint(rayDistance);
+            }
         }
-
         return null;
     }
 

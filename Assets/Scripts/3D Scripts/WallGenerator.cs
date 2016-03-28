@@ -142,76 +142,116 @@ public class WallGenerator : MonoBehaviour {
 		}
 	}
 
-	private void adjustShape(GameObject a, GameObject b, Vector3 point) {
-		float angle = a.GetComponent<WallFunctions> ().Angle - b.GetComponent<WallFunctions> ().Angle;
-		int baseA, baseB;
+    private void adjustShape(GameObject a, GameObject b, Vector3 point)
+    {
+        float angle = a.GetComponent<WallFunctions>().Angle - b.GetComponent<WallFunctions>().Angle;
+        int baseA, baseB, dupli_baseA, dupli_baseB;
 
-		//angle adjustments
-		if (angle > 180) {
-			angle = - (angle - 180);
-		}
+        //angle adjustments
+        if (angle > 180)
+        {
+            angle = -(angle - 180);
+        }
 
-		if (angle < -180) {
-			angle = - (angle + 180);
-		}
-		Debug.Log (angle);
+        if (angle < -180)
+        {
+            angle = (angle + 180);
+        }
+        //Debug.Log (angle);
 
-		Mesh meshA = a.GetComponent<MeshFilter> ().mesh;
-		Mesh meshB = b.GetComponent<MeshFilter> ().mesh;
+        Mesh meshA = a.GetComponent<MeshFilter>().mesh;
+        Mesh meshB = b.GetComponent<MeshFilter>().mesh;
 
-		Vector3[] vertsA = meshA.vertices;
-		int ovlA = (vertsA.Length - 4) / 2;
-		Vector3[] vertsB = meshB.vertices;
-		int ovlB = (vertsB.Length - 4) / 2;
+        Vector3[] vertsA = meshA.vertices;
+        int ovlA = a.GetComponent<WallFunctions>().Ovl;
+        Vector3[] vertsB = meshB.vertices;
+        int ovlB = b.GetComponent<WallFunctions>().Ovl;
 
-		float ext = (thickness / 2) / Mathf.Tan (angle * Mathf.Deg2Rad/ 2);
+        float ext = (thickness / 2) / Mathf.Tan(angle * Mathf.Deg2Rad / 2);
 
-		Debug.Log (ext);
-		//if (Mathf.Abs (angle) > 90)
-		//	ext = -ext;
-	
-		//Debug.Log (a.name + " " + b.name + " : " + ext);
-		bool isStartA = isStart (a, point);
-		bool isStartB = isStart (b, point);
+        //Debug.Log (ext);
+        //if (Mathf.Abs (angle) > 90)
+        //	ext = -ext;
 
-		if (isStartA) {
-			baseA = ovlA;
-		}
-		else 
-			baseA = 0;
+        //Debug.Log (a.name + " " + b.name + " : " + ext);
+        bool isStartA = isStart(a, point);
+        bool isStartB = isStart(b, point);
 
-		if (!isStartB) {
-			baseB = ovlB;
-		}
-		else 
-			baseB = 0;
-		
-		//subtract positive z direction vector from close-to-angle edge of A
-		Vector3 ext_vector = new Vector3(0, 0, ext);
+        if (isStartA)
+        {
+            baseA = ovlA;
+            dupli_baseA = 2 * ovlA + 4;
+        }
+        else
+        {
+            baseA = 0;
+            dupli_baseA = 2 * ovlA;
+        }
 
-		if (isStartA) {
-			vertsA [baseA + 0] += ext_vector;
-			vertsA [baseA + 1] += ext_vector;
-		} else {
-			vertsA [baseA + 2] -= ext_vector;
-			vertsA [baseA + 3] -= ext_vector;
-		}
+        if (!isStartB)
+        {
+            baseB = ovlB;
+            dupli_baseB = 2 * ovlB + 4;
+        }
+        else
+        {
+            baseB = 0;
+            dupli_baseB = 2 * ovlB;
+        }
 
-		if (isStartB) {
-			vertsB [baseB + 0] += ext_vector;
-			vertsB [baseB + 1] += ext_vector;
-		} else {
-			vertsB [baseB + 2] -= ext_vector;
-			vertsB [baseB + 3] -= ext_vector;
-		}
-		meshA.vertices = vertsA;
-		meshB.vertices = vertsB;
+        //subtract positive z direction vector from close-to-angle edge of A
+        Vector3 ext_vector = new Vector3(0, 0, ext);
+
+        if (isStartA)
+        {
+            vertsA[baseA + 0] += ext_vector;
+            vertsA[dupli_baseA + 0] += ext_vector;
+            vertsA[dupli_baseA + 19] += ext_vector;
+
+            vertsA[baseA + 1] += ext_vector;
+            vertsA[dupli_baseA + 1] += ext_vector;
+            vertsA[dupli_baseA + 6] += ext_vector;
+        }
+        else
+        {
+            vertsA[baseA + 2] -= ext_vector;
+            vertsA[dupli_baseA + 7] -= ext_vector;
+            vertsA[dupli_baseA + 12] -= ext_vector;
+
+            vertsA[baseA + 3] -= ext_vector;
+            vertsA[dupli_baseA + 13] -= ext_vector;
+            vertsA[dupli_baseA + 18] -= ext_vector;
+
+        }
+
+        if (isStartB)
+        {
+            vertsB[baseB + 0] += ext_vector;
+            vertsB[dupli_baseB + 0] += ext_vector;
+            vertsB[dupli_baseB + 19] += ext_vector;
+
+            vertsB[baseB + 1] += ext_vector;
+            vertsB[dupli_baseB + 1] += ext_vector;
+            vertsB[dupli_baseB + 6] += ext_vector;
+        }
+        else
+        {
+            vertsB[baseB + 2] -= ext_vector;
+            vertsB[dupli_baseB + 7] -= ext_vector;
+            vertsB[dupli_baseB + 12] -= ext_vector;
+
+            vertsB[baseB + 3] -= ext_vector;
+            vertsB[dupli_baseB + 13] -= ext_vector;
+            vertsB[dupli_baseB + 18] -= ext_vector;
+        }
+        meshA.vertices = vertsA;
+        meshB.vertices = vertsB;
 
 
 
 
-	}
-	private bool isStart(GameObject a, Vector3 point) {
+    }
+    private bool isStart(GameObject a, Vector3 point) {
 		//when coincident edges arent all start edges
 		return (a.GetComponent<WallFunctions> ().Start_pt == point);
 	}

@@ -23,9 +23,9 @@ public class SubmenuDragDropItem : UIDragDropItem
         base.OnDragDropStart();
         this.realWorldItem = GameObject.Instantiate(prefab);
         this.realWorldItem.transform.parent = houseObjectContainer;
+        this.realWorldItem.GetComponent<HouseObject>().init(originalParent.GetComponent<SubmenuItem>().category, originalParent.name);
         print("Path is " + "furniture/2D_Iso/" + "chair" + "/" + originalParent.name);
 
-        this.realWorldItem.GetComponent<Renderer>().material.mainTexture = Resources.Load("furniture/2D_Iso/" + "chair" + "/" + originalParent.name) as Texture2D;
     }
 
     protected override void OnClone(GameObject original)

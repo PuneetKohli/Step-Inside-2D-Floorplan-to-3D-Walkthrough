@@ -22,19 +22,24 @@ public class SubmenuManager : MonoBehaviour {
 
     public void ReloadSubmenu(int index)
     {
-        submenuTitle.GetComponent<UILabel>().text = clickManager.itemNames[index] + "s";
+        submenuTitle.GetComponent<UILabel>().text = clickManager.getItemNames()[index] + "s";
         NGUITools.DestroyChildren(submenuScrollview.transform);
 
+        string name =  clickManager.getItemNames()[index].Replace(" ", "").Replace("&","and");
+        print("name is " + name);
 
-        if (clickManager.GetType().GetField(clickManager.itemNames[index] + "Names") != null)
+        if (clickManager.GetType().GetField(name + "Names") != null)
         {
-            string[] submenuItems = (string[])clickManager.GetType().GetField(clickManager.itemNames[index] + "Names").GetValue(clickManager);
+            string[] submenuItems = (string[])clickManager.GetType().GetField(name + "Names").GetValue(clickManager);
             for (int i = 0; i < submenuItems.Length; i++)
             {
                 GameObject submenuItem = NGUITools.AddChild(submenuScrollview, submenuItemPrefab);
-                submenuItem.transform.GetComponent<SubmenuItem>().init(clickManager.itemNames[index], submenuItems[i]);
+                submenuItem.transform.GetComponent<SubmenuItem>().init(name, submenuItems[i]);
             }
             submenuScrollview.GetComponent<UIGrid>().Reposition();
         }
+
+        
     }
+   
 }

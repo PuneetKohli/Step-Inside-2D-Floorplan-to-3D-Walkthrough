@@ -3,23 +3,25 @@ using System.Linq;
 
 public class ClickManager : MonoBehaviour {
 
-    public string[] itemNames = new string[] { "cupboard", "table", "bed", "chair", "sofa", "lamp", "sink" };
+    private string[] itemNames; 
     [HideInInspector]
-    public string[] tableNames = new string[] { "simple", "wooden", "metal", "glass", "circle" };
+    public string[] tableNames;
     [HideInInspector]
-    public string[] cupboardNames = new string[] {"wooden", "metal", "glass", "circle" };
+    public string[] cupboardNames;
     [HideInInspector]
-    public string[] bedNames = new string[] { "bed1", "bed2", "bed3", "bed4", "bed5" };
+    public string[] bedNames;
     [HideInInspector]
-    public string[] chairNames = new string[] { "red", "wooden", "metal", "stylish", "plastic" };
+    public string[] chairNames;
+    [HideInInspector]
+    public string[] windowsanddoorNames;
 
-    WallManager wallManager;
+WallManager wallManager;
     GameObject _3DRoot, _2DRoot, mainMenuScrollView, submenu;
     WallGenerator wallGenerator;
 
 
 	// Use this for initialization
-	void Start () {
+	void Awake () {
         wallManager = GetComponent<WallManager>();
         _2DRoot = GameObject.Find("2D Root");
         _3DRoot = GameObject.Find("3D Root");
@@ -27,6 +29,13 @@ public class ClickManager : MonoBehaviour {
         submenu = GameObject.Find("Sub Menu");
         _3DRoot.SetActive(false);
         wallGenerator = _3DRoot.GetComponent<WallGenerator>();
+
+        itemNames = new string[] { "windows & door", "cupboard", "table", "bed", "chair", "sofa", "lamp", "sink" };
+        windowsanddoorNames = new string[]{ "window", "door"};
+        tableNames = new string[] { "simple", "wooden", "metal", "glass", "circle" };
+        cupboardNames = new string[] { "wooden", "metal", "glass", "circle" };
+        bedNames = new string[] { "bed1", "bed2", "bed3", "bed4", "bed5" };
+        chairNames = new string[] { "red", "wooden", "metal", "stylish", "plastic" };
     }
 
     public void clicked3DView()
@@ -47,5 +56,10 @@ public class ClickManager : MonoBehaviour {
     public int IndexOfItem(string itemName)
     {
         return itemNames.ToList().IndexOf(itemName);
+    }
+
+    public string[] getItemNames()
+    {
+        return itemNames;
     }
 }
