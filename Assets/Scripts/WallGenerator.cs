@@ -88,17 +88,7 @@ public class WallGenerator : MonoBehaviour {
 	
 	}
 
-	//draw corner points using gizmos 
-	/*void OnDrawGizmos() {
-		this.point_pairs_array = init_point_pairs();
-		//init_corners ();
-		Gizmos.color = Color.black;
-		for (int i = 0; i < point_pairs_array.Length; i++) {
-			Gizmos.DrawSphere(point_pairs_array[i][0], 0.1f);
-			Gizmos.DrawSphere(point_pairs_array[i][1], 0.1f);
-		}
-			
-	}*/
+
 	void Awake() {
 		this.point_pairs_array = init_point_pairs();
 	}
@@ -116,7 +106,7 @@ public class WallGenerator : MonoBehaviour {
 
 	private void adjustShape(GameObject a, GameObject b, Vector3 point) {
 		float angle = a.GetComponent<WallFunctions> ().Angle - b.GetComponent<WallFunctions> ().Angle;
-		int baseA, baseB;
+		int baseA, baseB, dupli_baseA, dupli_baseB;
 
 		//angle adjustments
 		if (angle > 180) {
@@ -132,9 +122,9 @@ public class WallGenerator : MonoBehaviour {
 		Mesh meshB = b.GetComponent<MeshFilter> ().mesh;
 
 		Vector3[] vertsA = meshA.vertices;
-		int ovlA = (vertsA.Length - 4) / 2;
+		int ovlA = a.GetComponent<WallFunctions> ().Ovl;
 		Vector3[] vertsB = meshB.vertices;
-		int ovlB = (vertsB.Length - 4) / 2;
+		int ovlB = b.GetComponent<WallFunctions> ().Ovl;
 
 		float ext = (thickness / 2) / Mathf.Tan (angle * Mathf.Deg2Rad/ 2);
 
@@ -148,33 +138,58 @@ public class WallGenerator : MonoBehaviour {
 
 		if (isStartA) {
 			baseA = ovlA;
-		}
-		else 
+			dupli_baseA = 2 * ovlA + 4;
+		} else {
 			baseA = 0;
+			dupli_baseA = 2 * ovlA;
+		}
 
 		if (!isStartB) {
 			baseB = ovlB;
-		}
-		else 
+			dupli_baseB = 2 * ovlB + 4;
+		} else { 
 			baseB = 0;
+			dupli_baseB = 2 * ovlB;
+		}
 		
 		//subtract positive z direction vector from close-to-angle edge of A
 		Vector3 ext_vector = new Vector3(0, 0, ext);
 
 		if (isStartA) {
 			vertsA [baseA + 0] += ext_vector;
+			vertsA [dupli_baseA + 0] += ext_vector;
+			vertsA [dupli_baseA + 19] += ext_vector;
+				
 			vertsA [baseA + 1] += ext_vector;
+			vertsA [dupli_baseA + 1] += ext_vector;
+			vertsA [dupli_baseA + 6] += ext_vector;
 		} else {
 			vertsA [baseA + 2] -= ext_vector;
+			vertsA [dupli_baseA + 7] -= ext_vector;
+			vertsA [dupli_baseA + 12] -= ext_vector;
+
 			vertsA [baseA + 3] -= ext_vector;
+			vertsA [dupli_baseA + 13] -= ext_vector;
+			vertsA [dupli_baseA + 18] -= ext_vector;
+
 		}
 
 		if (isStartB) {
 			vertsB [baseB + 0] += ext_vector;
+			vertsB [dupli_baseB + 0] += ext_vector;
+			vertsB [dupli_baseB + 19] += ext_vector;
+
 			vertsB [baseB + 1] += ext_vector;
+			vertsB [dupli_baseB + 1] += ext_vector;
+			vertsB [dupli_baseB + 6] += ext_vector;
 		} else {
 			vertsB [baseB + 2] -= ext_vector;
+			vertsB [dupli_baseB + 7] -= ext_vector;
+			vertsB [dupli_baseB + 12] -= ext_vector;
+
 			vertsB [baseB + 3] -= ext_vector;
+			vertsB [dupli_baseB + 13] -= ext_vector;
+			vertsB [dupli_baseB + 18] -= ext_vector;
 		}
 		meshA.vertices = vertsA;
 		meshB.vertices = vertsB;

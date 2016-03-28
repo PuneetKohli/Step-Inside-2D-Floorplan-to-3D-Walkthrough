@@ -19,7 +19,17 @@ public class WallFunctions : MonoBehaviour {
 	private List<int[]> holes = new List<int[]>();
 	private int hole_start_index = 4;
 	private int hole_end_index = 8;
+	private int ovl;
 	private bool has_hole = false;
+	public int Ovl {
+		get {
+			return this.ovl;
+		}
+		set {
+			ovl = value;
+		}
+	}
+
 	public float Angle {
 		get {
 			return this.angle;
@@ -171,6 +181,7 @@ public class WallFunctions : MonoBehaviour {
 		back_vertices.CopyTo (first_vertices, orignal_vertices.Length);
 
 		int ovl = orignal_vertices.Length;
+		this.ovl = ovl;
 		int last = first_vertices.Length;
 
 		//generate inverted back triangles
@@ -218,11 +229,9 @@ public class WallFunctions : MonoBehaviour {
 		int[] hole_triangles = new int[(hole_end_index - hole_start_index) * 2 * 3]; //two triangles for each edge with 3 values each
 		Vector3[] hole_vertices = new Vector3[(hole_end_index - hole_start_index) * 4];
 		//triangles and vertices for Hole faces
-		if (!this.has_hole) {
+		if (!this.has_hole)
 			hole_start_index = hole_end_index = 0;
-			Debug.Log ("No hole");
-		} else
-			Debug.Log ("Hole");
+
 		count = 0;
 		for (int i = hole_start_index; i < hole_end_index; i++) {
 			int first = i;
@@ -234,7 +243,6 @@ public class WallFunctions : MonoBehaviour {
 			vertices_hole_new [2] = back_vertices [first];
 			vertices_hole_new [3] = back_vertices [second];
 			vertices_hole_new.CopyTo (hole_vertices, count);
-			Debug.Log (vertices_hole_new[0]);
 			int[] quad_tri = quadTriangles (last + count + 0, last + count + 1, last + count + 3, last + count + 2);
 			quad_tri.CopyTo (hole_triangles, 6 * (i - hole_start_index));
 			count += 4;
