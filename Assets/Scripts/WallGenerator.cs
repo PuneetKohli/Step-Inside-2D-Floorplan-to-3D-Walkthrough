@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Poly2Tri;
 
 public class WallGenerator : MonoBehaviour {
 
@@ -10,7 +11,11 @@ public class WallGenerator : MonoBehaviour {
 	public float thickness = 0.2f;
 	private Dictionary<Vector3, List<GameObject>> nodes = new Dictionary<Vector3, List<GameObject>>();
 	private bool alternator = false;
+	private Dictionary<Vector3, int> vertexIndices = new Dictionary<Vector3, int> ();
 	private Vector3[][] point_pairs_array = null; 
+	private List<Vector3> new_verts = new List<Vector3>();
+	private List<int> new_tris = new List<int> ();
+	private int new_vert_count = 0;
 	// Use this for initialization
 
 
@@ -51,9 +56,6 @@ public class WallGenerator : MonoBehaviour {
 		Vector3[] node_points = nodes.Keys.ToArray ();
 		walls [2].GetComponent<WallFunctions> ().addHole ();
 
-		Vector3[] m = walls [1].GetComponent<MeshFilter> ().mesh.normals;
-		for (int i = 0; i < m.Length; i++)
-			Debug.Log (m[i]);
 		
 		for (int i = 0; i < node_values.Count(); i++) {
 			GameObject[] coincident_walls = node_values [i].ToArray (); 
@@ -85,9 +87,69 @@ public class WallGenerator : MonoBehaviour {
 			}
 		}
 
+		//Floor
+		List<Point> p = new List<Point>();
+		for (int i = 0; i < node_points.Length; i++) {
+			Point s = new Point ();
+			s.X = node_points [i].x;
+			s.Y = node_points [i].z;
+			p.Add (s);
+		}
+			
+		Point[] ch = ConvexHull.CH2 (p).ToArray();
+		Vector2[] floor_vertices = new Vector2[ch.Length - 1];
+
+		for (int i = 0; i < ch.Length - 1; i++) {
+			floor_vertices [i] = new Vector2 (ch[i].X, ch[i].Y);
+			Debug.Log (floor_vertices [i]);
+		}
+
+		GameObject floor = new GameObject ();
+		floor.name = "Floor";
+		floor.transform.parent = this.transform;
+		floor.AddComponent<MeshFilter> ();
+		floor.AddComponent<MeshRenderer> ();
+
+		Mesh floor_m = floor.GetComponent<MeshFilter> ().mesh;
+
+		Polygon floor_poly = createPoly (floor_vertices);
+		P2T.Triangulate (floor_poly);
+
+		for (int i = 0; i < floor_poly.Triangles.Count; i++)
+			for (int j = 0; j < 3; j++) {
+				TriangulationPoint tpt = floor_poly.Triangles [i].Points[j];
+				Vector3 pt = new Vector3 ( (float) tpt.X, 0, (float) tpt.Y);
+				new_tris.Add (vertexIndices [pt]);
+			}
+
+		floor_m.vertices = new_verts.ToArray ();
+		int[] tris =  new_tris.ToArray ();
+		for (int i = 0; i < tris.Length; i+=3) {
+			int temp = tris [i + 1];
+			tris [i + 1] = tris [i + 2];
+			tris [i + 2] = temp;
+		}
+		floor_m.triangles = tris;
+		floor_m.RecalculateNormals ();
+		Material newMat = Resources.Load("floorMaterial.mat", typeof(Material)) as Material;
+		Debug.Log (newMat);
+		MeshRenderer renderer = floor.GetComponent<MeshRenderer> ();
+		renderer.materials[0] = newMat;
+		//floor.AddComponent<Material> = new Material ();
 	
 	}
-
+	private Polygon createPoly(Vector2[] points) {
+		List<PolygonPoint> polyPoints = new List<PolygonPoint> ();
+		for (int i = 0; i < points.Length; i++) {
+			polyPoints.Add (new PolygonPoint (points [i].x, points [i].y));
+			Vector3 pt = new Vector3 ( points [i].x, 0,  points [i].y );
+			new_verts.Add (pt);
+			vertexIndices.Add (pt, new_vert_count);
+			new_vert_count++;
+		}
+		Polygon P = new Polygon (polyPoints);
+		return P;
+	}
 
 	void Awake() {
 		this.point_pairs_array = init_point_pairs();
@@ -194,9 +256,6 @@ public class WallGenerator : MonoBehaviour {
 		meshA.vertices = vertsA;
 		meshB.vertices = vertsB;
 
-
-
-
 	}
 	private bool isStart(GameObject a, Vector3 point) {
 		//when coincident edges arent all start edges
@@ -213,3 +272,151 @@ public class WallGenerator : MonoBehaviour {
 		
 	}
 }
+
+struct Point {
+	public float X, Y;
+	public static bool operator == (Point u1, Point u2) 
+	{
+		return u1.Equals(u2);  // use ValueType.Equals() which compares field-by-field.
+	}
+	public static bool operator != (Point u1, Point u2) 
+	{
+		return !u1.Equals(u2);  // use ValueType.Equals() which compares field-by-field.
+	}
+	public Point (float x, float y) {
+		X = x;
+		Y = y;
+	}
+}
+
+	class ConvexHull
+	{
+		public static List<Point> CH2(List<Point> points)
+		{
+			return CH2(points, false);
+		}
+
+		public static List<Point> CH2(List<Point> points, bool removeFirst)
+		{
+			List<Point> vertices = new List<Point>();
+
+			if (points.Count == 0)
+				return null;
+			else if (points.Count == 1)
+			{
+				// If it's a single point, return it
+				vertices.Add(points[0]);
+				return vertices;
+			}
+
+
+			Point leftMost = CH2Init(points);
+			vertices.Add(leftMost);
+
+			Point prev = leftMost;
+			Point? next;
+			double rot = 0;
+			do
+			{
+				next = CH2Step(prev, points, ref rot);
+
+				// If it's not the first vertex (leftmost) or we want spiral (instead of CH2)
+				// remove it
+				if (prev != leftMost || removeFirst)
+					points.Remove(prev);
+
+				// If this isn't the last vertex, save it
+				if (next.HasValue)
+				{
+					vertices.Add(next.Value);
+					prev = next.Value;
+				}
+
+			} while (points.Count > 0 && next.HasValue && next.Value != leftMost);
+			points.Remove(leftMost);
+
+			return vertices;
+
+		}
+
+		private static Point CH2Init(List<Point> points)
+		{
+			// Initialization - Find the leftmost point
+			Point leftMost = points[0];
+			double leftX = leftMost.X;
+
+			foreach (Point p in points)
+			{
+				if (p.X < leftX)
+				{
+					leftMost = p;
+					leftX = p.X;
+				}
+			}
+			return leftMost;
+		}
+
+		private static Point? CH2Step(Point currentPoint, List<Point> points, ref double rot)
+		{
+			double angle, angleRel, smallestAngle = 2 * Mathf.PI, smallestAngleRel = 4 * Mathf.PI;
+			Point? chosen = null;
+			float xDiff, yDiff;
+
+			foreach (Point candidate in points)
+			{
+				if (candidate == currentPoint)
+					continue;
+
+				xDiff = candidate.X - currentPoint.X;
+				yDiff = -(candidate.Y - currentPoint.Y); //Y-axis starts on top
+				angle = ComputeAngle(new Point(xDiff, yDiff));
+
+				// angleRel is the angle between the line and the rotated y-axis
+				// y-axis has the direction of the last computed supporting line
+				// given by variable rot.
+				angleRel = 2 * Mathf.PI - (rot - angle);
+
+				if (angleRel >= 2 * Mathf.PI)
+					angleRel -= 2 * Mathf.PI;
+				if (angleRel < smallestAngleRel)
+				{
+					smallestAngleRel = angleRel;
+					smallestAngle = angle;
+					chosen = candidate;
+				}
+
+			}
+
+			// Save the smallest angle as the rotation of the y-axis for the
+			// computation of the next supporting line.
+			rot = smallestAngle;
+
+			return chosen;
+		}
+
+
+		private static double ComputeAngle(Point p)
+		{
+			if (p.X > 0 && p.Y > 0)
+			return Mathf.Atan(p.X / p.Y);
+			else if (p.X > 0 && p.Y == 0)
+				return (Mathf.PI / 2);
+			else if (p.X > 0 && p.Y < 0)
+				return (Mathf.PI + Mathf.Atan(p.X / p.Y));
+			else if (p.X == 0 && p.Y >= 0)
+				return 0;
+			else if (p.X == 0 && p.Y < 0)
+				return Mathf.PI;
+			else if (p.X < 0 && p.Y > 0)
+				return (2 * Mathf.PI + Mathf.Atan(p.X / p.Y));
+			else if (p.X < 0 && p.Y == 0)
+				return (3 * Mathf.PI / 2);
+			else if (p.X < 0 && p.Y < 0)
+				return (Mathf.PI + Mathf.Atan(p.X / p.Y));
+			else
+				return 0;
+		}
+
+
+
+	}
