@@ -16,36 +16,38 @@ public class SubmenuDragDropItem : UIDragDropItem
 
     protected override void OnDragDropStart()
     {
-        print("Drag drop started");
         gameContainer = GameObject.Find("2DManager");
         houseObjectContainer = GameObject.Find("HouseObjectContainer").transform;
         this.isDragging = true;
-        base.OnDragDropStart();
         this.realWorldItem = GameObject.Instantiate(prefab);
         this.realWorldItem.transform.parent = houseObjectContainer;
-        this.realWorldItem.GetComponent<HouseObject>().init(originalParent.GetComponent<SubmenuItem>().category, originalParent.name);
-        print("Path is " + "furniture/2D_Iso/" + "chair" + "/" + originalParent.name);
+        if (originalParent.GetComponent<SubmenuItem>().category.Equals("windowsanddoor"))
+        {
+            this.realWorldItem.GetComponent<HouseObject>().init(originalParent.GetComponent<SubmenuItem>().category, originalParent.name, true);
+        }
+        else
+        {
+            this.realWorldItem.GetComponent<HouseObject>().init(originalParent.GetComponent<SubmenuItem>().category, originalParent.name, false);
+        }
+        base.OnDragDropStart();
 
     }
 
     protected override void OnClone(GameObject original)
     {
         originalParent = original.transform.parent;
-        print("clone created");
         this.transform.localScale = Vector3.zero;
         base.OnClone(original);
     }
 
     protected override void OnDragStart()
     {
-        print("Drag started");
         this.isDragging = true;
         base.OnDragStart();
     }
 
     protected override void OnDragEnd()
     {
-        print("Ended");
         this.enabled = false;
         this.isDragging = false;
         base.OnDragEnd();
@@ -53,7 +55,6 @@ public class SubmenuDragDropItem : UIDragDropItem
 
     protected override void OnDragDropEnd()
     {
-        print("Drop ended");
         this.isDragging = false;
         if (realWorldItem != null)
         {
@@ -87,7 +88,6 @@ public class SubmenuDragDropItem : UIDragDropItem
 
     void handleDrag()
     {
-        print("IS DRAGGING??? " + isDragging);
         if (this.isDragging && realWorldItem != null)
         {
             print(realWorldItem);
@@ -95,7 +95,15 @@ public class SubmenuDragDropItem : UIDragDropItem
             RaycastHit[] hitList = Physics.BoxCastAll(GetCurrentMousePosition(Input.mousePosition).GetValueOrDefault(), realWorldItem.GetComponent<Renderer>().bounds.extents * 1.1f, Vector3.forward, transform.rotation, float.PositiveInfinity, layerMask);
             if (hitList.Length > 0)
             {
-                realWorldItem.SendMessage("MakeNotPlacable");
+                if (!realWorldItem.GetComponent<HouseObject>().isWallAttachable)
+                {
+                    realWorldItem.SendMessage("MakeNotPlacable");
+                }
+                else
+                {
+                    realWorldItem.SendMessage("MakePlacable");
+                }
+
                 /*for (int i = 0; i < hitList.Length; i++)
                 {
                     print("Hit with object " + hitList[i].transform.name);
@@ -103,7 +111,14 @@ public class SubmenuDragDropItem : UIDragDropItem
             }
             else
             {
-                realWorldItem.SendMessage("MakePlacable");
+                if (!realWorldItem.GetComponent<HouseObject>().isWallAttachable)
+                {
+                    realWorldItem.SendMessage("MakePlacable");
+                }
+                else
+                {
+                    realWorldItem.SendMessage("MakeNotPlacable");
+                }
             }
         }
     }
