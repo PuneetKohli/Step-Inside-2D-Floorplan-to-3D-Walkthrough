@@ -1,19 +1,42 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class WallAttachableObject : HouseObject {
+public class WallAttachableObject : HouseObject
+{
 
     public GameObject startNode, endNode;
+    public float length;
+    public float height;
+    public float elevation;
 
-	// Use this for initialization
-	protected override void Start () {
+    // Use this for initialization
+    protected override void Start()
+    {
         isWallAttachable = true;
         base.Start();
     }
-	
-	// Update is called once per frame
-	void Update () {
-	}
+
+    public override void init(string category, string name, bool isWallAttachable)
+    {
+        base.init(category, name, isWallAttachable);
+        if (name.Contains("window"))
+        {
+            length = 2f;
+            height = 2f;
+            elevation = 2.5f;
+        }
+        else if (name.Contains("door"))
+        {
+            length = 2f;
+            height = 4f;
+            elevation = height * 0.5f + 0.001f;
+        }
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+    }
 
     protected override void MakePlacable()
     {
@@ -42,26 +65,26 @@ public class WallAttachableObject : HouseObject {
     protected override void PlaceObject()
     {
 
-            RaycastHit[] hitList = Physics.BoxCastAll(GetComponent<Renderer>().bounds.center, GetComponent<Renderer>().bounds.extents * 1.1f, Vector3.forward, transform.rotation, float.PositiveInfinity, layerMask);
-            int firstWallPos = hitList.Length;
-            if (hitList.Length > 0)
+        RaycastHit[] hitList = Physics.BoxCastAll(GetComponent<Renderer>().bounds.center, GetComponent<Renderer>().bounds.extents * 1.1f, Vector3.forward, transform.rotation, float.PositiveInfinity, layerMask);
+        int firstWallPos = hitList.Length;
+        if (hitList.Length > 0)
+        {
+            for (int i = 0; i < hitList.Length; i++)
             {
-                for (int i = 0; i < hitList.Length; i++)
+                if (!hitList[i].transform.name.Contains("Wall"))
                 {
-                    if (!hitList[i].transform.name.Contains("Wall"))
-                    {
-                        Destroy(gameObject);
-                    }
-                    else if (i < firstWallPos)
-                    {
-                        firstWallPos = i;
-                    }
+                    Destroy(gameObject);
                 }
-                adjustPosition(hitList[firstWallPos].transform);
+                else if (i < firstWallPos)
+                {
+                    firstWallPos = i;
+                }
             }
+            adjustPosition(hitList[firstWallPos].transform);
+        }
         print(wallManager + " is wall manager");
         wallManager.windowList.Add(gameObject);
-        gameObject.name = "Window " + (wallManager.windowList.Count - 1);
+        gameObject.name += (wallManager.windowList.Count - 1);
         base.PlaceObject();
     }
 

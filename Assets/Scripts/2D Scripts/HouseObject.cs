@@ -47,7 +47,7 @@ public class HouseObject : MonoBehaviour {
         GetComponent<BoxCollider>().enabled = true;
     }
 
-    public void init(string category, string name, bool isWallAttachable)
+    public virtual void init(string category, string name, bool isWallAttachable)
     {
         GetComponent<Renderer>().material.mainTexture = Resources.Load("furniture/2D_Iso/" + category + "/" + name) as Texture2D;
         float height = GetComponent<Renderer>().material.mainTexture.height;
@@ -65,6 +65,7 @@ public class HouseObject : MonoBehaviour {
         }
 
         transform.localScale = new Vector3(multiplier *  aspect, multiplier, 1f);
+        transform.name = name;
         this.isWallAttachable = isWallAttachable;
     }
 

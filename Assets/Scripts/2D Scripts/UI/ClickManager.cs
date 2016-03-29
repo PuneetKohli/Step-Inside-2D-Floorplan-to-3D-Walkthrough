@@ -15,19 +15,22 @@ public class ClickManager : MonoBehaviour {
     [HideInInspector]
     public string[] windowsanddoorNames;
 
-WallManager wallManager;
-    GameObject _3DRoot, _2DRoot, mainMenuScrollView, submenu;
+    WallManager wallManager;
+    GameObject _3DRoot, _2DRoot;
+    GameObject mainMenuScrollView, submenu;
     WallGenerator wallGenerator;
 
 
 	// Use this for initialization
 	void Awake () {
-        wallManager = GetComponent<WallManager>();
-        _2DRoot = GameObject.Find("2D Root");
         _3DRoot = GameObject.Find("3D Root");
+        _3DRoot.SetActive(false);
+        _2DRoot = GameObject.Find("2D Root");
+        wallManager = GetComponent<WallManager>();
+        //_2DRoot = GameObject.Find("2D Root");
+        //_3DRoot = GameObject.Find("3D Root");
         mainMenuScrollView = GameObject.Find("Main Menu Scroll View");
         submenu = GameObject.Find("Sub Menu");
-        _3DRoot.SetActive(false);
         wallGenerator = _3DRoot.GetComponent<WallGenerator>();
 
         itemNames = new string[] { "windows & door", "cupboard", "table", "bed", "chair", "sofa", "lamp", "sink" };

@@ -331,8 +331,11 @@ public class WallManager : MonoBehaviour {
             }
             
             WallAttachableObject w = windowList[i].GetComponent<WallAttachableObject>();
-            w.startNode = hitList[correctWallIndex].transform.GetComponent<Wall>().startNode;
-            w.endNode = hitList[correctWallIndex].transform.GetComponent<Wall>().endNode;
+            if(correctWallIndex < hitList.Length && correctWallIndex != -1)
+            { 
+                w.startNode = hitList[correctWallIndex].transform.GetComponent<Wall>().startNode;
+                w.endNode = hitList[correctWallIndex].transform.GetComponent<Wall>().endNode;
+            }
         }
         return windowList;
     }
