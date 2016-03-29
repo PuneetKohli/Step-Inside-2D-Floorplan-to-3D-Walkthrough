@@ -4,10 +4,16 @@ using System.Collections;
 public class WallAttachableObject : HouseObject {
 
     public GameObject startNode, endNode;
+	public float length;
+	public float height;
+	public float elevation;
 
 	// Use this for initialization
 	protected override void Start () {
         isWallAttachable = true;
+		length = 2f;
+		height = 4f;
+		elevation = 2.001f;
         base.Start();
     }
 	

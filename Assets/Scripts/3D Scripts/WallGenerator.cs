@@ -10,6 +10,7 @@ public class WallGenerator : MonoBehaviour {
 	private Dictionary<Vector3, List<GameObject>> nodes = new Dictionary<Vector3, List<GameObject>>();
 	private bool alternator = false;
 	private Vector3[][] point_pairs_array = null;
+	private GameObject[] walls = null;
     // Use this for initialization
 
 
@@ -49,6 +50,7 @@ public class WallGenerator : MonoBehaviour {
     {
         point_pairs_array = initPointPairsFromNodes(nodeList);
         generateWalls();
+		addWindow (windowList[0]);
     }
 
     private void generateWalls()
@@ -64,7 +66,7 @@ public class WallGenerator : MonoBehaviour {
             wall_script.generateWall(point_pairs_array[i][0], point_pairs_array[i][1]);
 
         }
-
+		this.walls = walls;
         //Debug.Log (-3 % walls.Length);
         //adjust all walls
         foreach (GameObject wall_object in walls)
@@ -111,6 +113,31 @@ public class WallGenerator : MonoBehaviour {
         }
     }
 
+	public void addWindow(GameObject window) {
+		Vector3 abs_position = window.transform.position;
+		Vector3 startNode = swapVectorYZ(window.GetComponent<WallAttachableObject>().startNode.transform.position);
+		Vector3 endNode = swapVectorYZ(window.GetComponent<WallAttachableObject>().endNode.transform.position);
+		float holeLength = window.GetComponent<WallAttachableObject>().length;
+		float holeHeight = window.GetComponent<WallAttachableObject>().height;
+		float holeElevation = window.GetComponent<WallAttachableObject>().elevation;
+		for (int i = 0; i < walls.Length; i++) {
+			//print ("Point pair array " + point_pairs_array [i][0] + " " + point_pairs_array[i][1]);
+			if (contains(point_pairs_array[i], startNode) && contains(point_pairs_array[i], endNode)) {
+				Vector3 wall_position = walls [i].GetComponent<WallFunctions> ().Start_pt;
+				walls [i].GetComponent<WallFunctions> ().addHole (abs_position - wall_position, holeLength, holeHeight, holeElevation);
+				//Debug.Log ("Found " + walls[i].name);
+				return;
+			}
+		}
+		Debug.Log ("Not Found");
+	}
+	private bool contains ( Vector3[] array, Vector3 vect ) {
+		for (int i = 0; i < array.Length; i++)
+			if (array [i].Equals (vect))
+				return true;
+		return false;
+	}
+			
 
 	void Start (){
 		//Vector3[][] point_pairs_array = init_point_pairs ();
@@ -155,7 +182,7 @@ public class WallGenerator : MonoBehaviour {
 
         if (angle < -180)
         {
-            angle = (angle + 180);
+            angle = (angle + 360);
         }
         //Debug.Log (angle);
 

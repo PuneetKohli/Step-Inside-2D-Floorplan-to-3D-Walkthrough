@@ -21,6 +21,9 @@ public class WallFunctions : MonoBehaviour
     private int hole_start_index = 4;
     private int hole_end_index = 8;
     private int ovl;
+	public float hole_length = 1;
+	public float hole_height = 1;
+	public float hole_elevation = 2;
     private bool has_hole = false;
     public int Ovl
     {
@@ -119,49 +122,54 @@ public class WallFunctions : MonoBehaviour
 
     }
 
-    public void addHole()
+
+	public void addHole(Vector3 position, float hole_length, float hole_height, float hole_elevation)
     {
         Mesh mesh = GetComponent<MeshFilter>().mesh;
+		float distance = position.magnitude;
+		//distance = 1;
 
-        List<Vector2> rectanglePoints = new List<Vector2>();
-        List<Vector2> holePoints = new List<Vector2>();
+		if (distance > (length - hole_length / 2) || distance < hole_length / 2) {
+			Debug.Log ("Hole exceeds " + this.name);
+		} else {
+			List<Vector2> rectanglePoints = new List<Vector2> ();
+			List<Vector2> holePoints = new List<Vector2> ();
 
-        rectanglePoints.Add(new Vector2(0, 0));
-        rectanglePoints.Add(new Vector2(0, height));
-        rectanglePoints.Add(new Vector2(length, height));
-        rectanglePoints.Add(new Vector2(length, 0));
+			rectanglePoints.Add (new Vector2 (0, 0));
+			rectanglePoints.Add (new Vector2 (0, height));
+			rectanglePoints.Add (new Vector2 (length, height));
+			rectanglePoints.Add (new Vector2 (length, 0));
 
-        holePoints.Add(new Vector2(length / 3, height / 3));
-        holePoints.Add(new Vector2(length / 3, 2 * height / 3));
-        holePoints.Add(new Vector2(2 * length / 3, 2 * height / 3));
-        holePoints.Add(new Vector2(2 * length / 3, height / 3));
+			holePoints.Add (new Vector2 (distance - hole_length / 2, hole_elevation - hole_height / 2));
+			holePoints.Add (new Vector2 (distance - hole_length / 2, hole_elevation + hole_height / 2));
+			holePoints.Add (new Vector2 (distance + hole_length / 2, hole_elevation + hole_height / 2));
+			holePoints.Add (new Vector2 (distance + hole_length / 2, hole_elevation - hole_height / 2));
 
-        Polygon Rectangle = createPoly(rectanglePoints.ToArray());
-        Polygon Hole = createPoly(holePoints.ToArray());
+			Polygon Rectangle = createPoly (rectanglePoints.ToArray ());
+			Polygon Hole = createPoly (holePoints.ToArray ());
 
 
-        Rectangle.AddHole(Hole);
-        P2T.Triangulate(Rectangle);
-        //Debug.Log ("here");
-        for (int i = 0; i < Rectangle.Triangles.Count; i++)
-            for (int j = 0; j < 3; j++)
-            {
-                TriangulationPoint tpt = Rectangle.Triangles[i].Points[j];
-                Vector3 pt = new Vector3(-thickness / 2, (float)tpt.Y, (float)tpt.X);
-                new_tris.Add(vertexIndices[pt]);
-            }
-        mesh.Clear();
-        this.has_hole = true;
-        hole_start_index = 4;
-        hole_end_index = 8;
-        mesh.vertices = new_verts.ToArray();
-        mesh.triangles = new_tris.ToArray();
+			Rectangle.AddHole (Hole);
+			P2T.Triangulate (Rectangle);
+			//Debug.Log ("here");
+			for (int i = 0; i < Rectangle.Triangles.Count; i++)
+				for (int j = 0; j < 3; j++) {
+					TriangulationPoint tpt = Rectangle.Triangles [i].Points [j];
+					Vector3 pt = new Vector3 (-thickness / 2, (float)tpt.Y, (float)tpt.X);
+					new_tris.Add (vertexIndices [pt]);
+				}
+			mesh.Clear ();
+			this.has_hole = true;
+			hole_start_index = 4;
+			hole_end_index = 8;
+			mesh.vertices = new_verts.ToArray ();
+			mesh.triangles = new_tris.ToArray ();
 
-        //Debug.Log ("First vertex " + mesh.vertices [0]);
+			//Debug.Log ("First vertex " + mesh.vertices [0]);
 
-        mesh = this.extrudeWall(mesh);
-        mesh.RecalculateNormals();
-
+			mesh = this.extrudeWall (mesh);
+			mesh.RecalculateNormals ();
+		}
     }
 
     private Polygon createPoly(Vector2[] points)
