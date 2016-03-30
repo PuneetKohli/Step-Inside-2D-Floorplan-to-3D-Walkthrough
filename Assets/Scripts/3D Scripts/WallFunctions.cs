@@ -17,7 +17,7 @@ public class WallFunctions : MonoBehaviour
     private List<Vector3> new_verts = new List<Vector3>();
     private List<int> new_tris = new List<int>();
     private int new_vert_count = 0;
-    private List<int[]> holes = new List<int[]>();
+	private List<Hole> hole_list = new List<Hole> ();
     private int hole_start_index = 4;
     private int hole_end_index = 8;
     private int ovl;
@@ -25,6 +25,7 @@ public class WallFunctions : MonoBehaviour
     public float hole_height = 1;
     public float hole_elevation = 2;
     private bool has_hole = false;
+	private Polygon latest_face = null;
     public int Ovl
     {
         get
@@ -126,6 +127,7 @@ public class WallFunctions : MonoBehaviour
     }
 
 
+
     public void addHole(Vector3 position, float hole_length, float hole_height, float hole_elevation)
     {
         Mesh mesh = GetComponent<MeshFilter>().mesh;
@@ -182,6 +184,68 @@ public class WallFunctions : MonoBehaviour
         gameObject.AddMissingComponent<MeshCollider>().sharedMesh = mesh;
 
     }
+	public void addHoles(List<Hole> holes)
+	{
+		Mesh mesh = GetComponent<MeshFilter>().mesh;
+		List<Vector2> rectanglePoints = new List<Vector2> ();
+		rectanglePoints.Add (new Vector2 (0, 0));
+		rectanglePoints.Add (new Vector2 (0, height));
+		rectanglePoints.Add (new Vector2 (length, height));
+		rectanglePoints.Add (new Vector2 (length, 0));
+		latest_face = createPoly (rectanglePoints.ToArray ());
+
+		for (int l = 0; l < holes.Count; l++)
+			Debug.Log (holes[l].Position);
+
+		for (int k = 0; k < holes.Count; k++) {
+			float distance = (holes[k].Position - this.Start_pt).magnitude;
+			hole_length = holes [k].Hole_length;
+			hole_height = holes [k].Hole_height;
+			hole_elevation = holes [k].Hole_elevation;
+			//distance = 1;
+
+			if (distance > (length - hole_length / 2) || distance < hole_length / 2) {
+				Debug.Log ("Hole exceeds " + this.name + " by " + distance);
+			} else {
+				List<Vector2> holePoints = new List<Vector2> ();
+
+				holePoints.Add (new Vector2 (distance - hole_length / 2, hole_elevation - hole_height / 2));
+				holePoints.Add (new Vector2 (distance - hole_length / 2, hole_elevation + hole_height / 2));
+				holePoints.Add (new Vector2 (distance + hole_length / 2, hole_elevation + hole_height / 2));
+				holePoints.Add (new Vector2 (distance + hole_length / 2, hole_elevation - hole_height / 2));
+
+				
+				Polygon Hole = createPoly (holePoints.ToArray ());
+				Debug.Log ("Created hole");
+
+
+				latest_face.AddHole (Hole);
+
+				holes [k].Hole_start_index = (k - 1) >= 0 ? holes [k - 1].Hole_end_index : 4;
+				this.has_hole = true;
+				//Debug.Log ("here");
+				hole_list.Add (holes [k]);
+			}
+
+			
+		} // holes loop end
+		print(latest_face);
+		P2T.Triangulate (latest_face);
+		for (int i = 0; i < latest_face.Triangles.Count; i++)
+			for (int j = 0; j < 3; j++) {
+				TriangulationPoint tpt = latest_face.Triangles [i].Points [j];
+				Vector3 pt = new Vector3 (-thickness / 2, (float)tpt.Y, (float)tpt.X);
+				new_tris.Add (vertexIndices [pt]);
+			}
+		mesh.Clear ();
+		mesh.vertices = new_verts.ToArray ();
+		mesh.triangles = new_tris.ToArray ();
+		mesh = this.extrudeWall (mesh);
+		mesh.RecalculateNormals ();
+		//PUNEET -> ReAdded Meshcollider to wall in the case of hole
+		gameObject.AddMissingComponent<MeshCollider>().sharedMesh = mesh;
+
+	}
 
     private Polygon createPoly(Vector2[] points)
     {
@@ -266,28 +330,31 @@ public class WallFunctions : MonoBehaviour
         }
         last = first_vertices.Length + hex_vertices.Length;
 
-        int[] hole_triangles = new int[(hole_end_index - hole_start_index) * 2 * 3]; //two triangles for each edge with 3 values each
-        Vector3[] hole_vertices = new Vector3[(hole_end_index - hole_start_index) * 4];
+		int[] hole_triangles = new int[hole_list.Count * 4 * 2 * 3]; //two triangles for each edge with 3 values each
+		Vector3[] hole_vertices = new Vector3[hole_list.Count * 4 * 4]; // 4 new points for each edge
         //triangles and vertices for Hole faces
-        if (!this.has_hole)
-            hole_start_index = hole_end_index = 0;
+        
+		for (int k = 0; k < hole_list.Count; k++) {
+			count = 0;
+			hole_start_index = hole_list [k].Hole_start_index;
+			hole_end_index = hole_list [k].Hole_end_index;
+			for (int i = hole_start_index; i < hole_end_index; i++) {
 
-        count = 0;
-        for (int i = hole_start_index; i < hole_end_index; i++)
-        {
-            int first = i;
-            int second = hole_start_index + (((i - hole_start_index) + 1) % (hole_end_index - hole_start_index));
+				Debug.Log ("Wound " + hole_start_index);
+				int first = i;
+				int second = hole_start_index + (((i - hole_start_index) + 1) % (hole_end_index - hole_start_index));
 
-            Vector3[] vertices_hole_new = new Vector3[4];
-            vertices_hole_new[0] = orignal_vertices[first];
-            vertices_hole_new[1] = orignal_vertices[second];
-            vertices_hole_new[2] = back_vertices[first];
-            vertices_hole_new[3] = back_vertices[second];
-            vertices_hole_new.CopyTo(hole_vertices, count);
-            int[] quad_tri = quadTriangles(last + count + 0, last + count + 1, last + count + 3, last + count + 2);
-            quad_tri.CopyTo(hole_triangles, 6 * (i - hole_start_index));
-            count += 4;
-        }
+				Vector3[] vertices_hole_new = new Vector3[4];
+				vertices_hole_new [0] = orignal_vertices [first];
+				vertices_hole_new [1] = orignal_vertices [second];
+				vertices_hole_new [2] = back_vertices [first];
+				vertices_hole_new [3] = back_vertices [second];
+				vertices_hole_new.CopyTo (hole_vertices, count);
+				int[] quad_tri = quadTriangles (last + count + 0, last + count + 1, last + count + 3, last + count + 2);
+				quad_tri.CopyTo (hole_triangles, 6 * (i - hole_start_index));
+				count += 4;
+			}
+		}
         Vector3[] vertices = new Vector3[first_vertices.Length + hex_vertices.Length + hole_vertices.Length];
         first_vertices.CopyTo(vertices, 0);
         hex_vertices.CopyTo(vertices, first_vertices.Length);
