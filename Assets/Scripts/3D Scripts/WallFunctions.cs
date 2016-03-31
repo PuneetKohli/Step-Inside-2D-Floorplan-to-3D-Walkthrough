@@ -335,12 +335,14 @@ public class WallFunctions : MonoBehaviour
         //triangles and vertices for Hole faces
         
 		for (int k = 0; k < hole_list.Count; k++) {
+			Debug.Log ("Hole " + k);
 			count = 0;
 			hole_start_index = hole_list [k].Hole_start_index;
 			hole_end_index = hole_list [k].Hole_end_index;
+			Debug.Log (hole_start_index);
 			for (int i = hole_start_index; i < hole_end_index; i++) {
 
-				Debug.Log ("Wound " + hole_start_index);
+
 				int first = i;
 				int second = hole_start_index + (((i - hole_start_index) + 1) % (hole_end_index - hole_start_index));
 
@@ -349,16 +351,26 @@ public class WallFunctions : MonoBehaviour
 				vertices_hole_new [1] = orignal_vertices [second];
 				vertices_hole_new [2] = back_vertices [first];
 				vertices_hole_new [3] = back_vertices [second];
-				vertices_hole_new.CopyTo (hole_vertices, count);
+				Debug.Log ("Wound " + vertices_hole_new[0]);
+				vertices_hole_new.CopyTo (hole_vertices, k*16 + count);
+
 				int[] quad_tri = quadTriangles (last + count + 0, last + count + 1, last + count + 3, last + count + 2);
-				quad_tri.CopyTo (hole_triangles, 6 * (i - hole_start_index));
+				quad_tri.CopyTo (hole_triangles,(6 * 4 * k) + (6 * (i - hole_start_index)));
+				for (int m = 0; m < quad_tri.Length; m++) {
+					Debug.Log(quad_tri [m]);
+				}
 				count += 4;
 			}
+			last += 16;
+		}
+		for (int m = 0; m < hole_vertices.Length; m++) {
+			Debug.Log(hole_vertices [m]);
 		}
         Vector3[] vertices = new Vector3[first_vertices.Length + hex_vertices.Length + hole_vertices.Length];
         first_vertices.CopyTo(vertices, 0);
         hex_vertices.CopyTo(vertices, first_vertices.Length);
         hole_vertices.CopyTo(vertices, first_vertices.Length + hex_vertices.Length);
+
 
         //combine triangles
         int[] triangles = new int[orignal_triangles.Length + back_triangles.Length + hex_triangles.Length + hole_triangles.Length];
