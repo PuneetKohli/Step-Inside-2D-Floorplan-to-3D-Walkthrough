@@ -18,6 +18,7 @@ public class WallGenerator : MonoBehaviour
     private int new_vert_count = 0;
     private Dictionary<Vector3, int> vertexIndices = new Dictionary<Vector3, int>();
 	private Dictionary<GameObject, List<Hole>> wall_holes = new Dictionary<GameObject, List<Hole>>();
+	public LayerMask layerMask3D;
     // Use this for initialization
 
 
@@ -71,6 +72,7 @@ public class WallGenerator : MonoBehaviour
         for (int i = 0; i < point_pairs_array.Length; i++)
         {
             GameObject wall_object = new GameObject();
+			wall_object.layer = 10;
             wall_object.name = "Wall " + i;
             wall_object.transform.parent = this.transform;
             walls[i] = wall_object;
@@ -198,15 +200,16 @@ public class WallGenerator : MonoBehaviour
     {
 		foreach (GameObject window in windows) {
 			
-			Vector3 abs_position = window.transform.position;
 			Hole h = new Hole ();
-			h.Position = abs_position;
+			h.Position = window.transform.position;
 			h.Hole_length = window.GetComponent<WallAttachableObject>().length;
 			h.Hole_height = window.GetComponent<WallAttachableObject>().height;
 			h.Hole_elevation = window.GetComponent<WallAttachableObject>().elevation;
 			//Vector3 startNode = swapVectorYZ(window.GetComponent<WallAttachableObject>().startNode.transform.position);
 			//Vector3 endNode = swapVectorYZ(window.GetComponent<WallAttachableObject>().endNode.transform.position);
-			GameObject w = liesOn (abs_position);
+			GameObject w = liesOn (h);
+			h.Position = swapVectorYZ(window.transform.position);
+
 			if (w != null) {
 				holeAddOrUpdate (w, h);
 			}
@@ -227,14 +230,27 @@ public class WallGenerator : MonoBehaviour
                 return true;
         return false;
     }
-	private GameObject liesOn (Vector3 abs_position) {
+	private GameObject liesOn (Hole h) {
+		Vector3 relativePos = new Vector3(h.Position.x, 2.5f, h.Position.y);
+		//RaycastHit[] hitList = Physics.BoxCastAll (relativePos, new Vector3 (h.Hole_length / 2, h.Hole_height / 2, thickness), Vector3.down, layerMask3D);
+		//print ("Hit list count is " + hitList.Length);
+		print("Box pos is  " + relativePos + " " + new Vector3 (thickness, h.Hole_height / 2, thickness));
+
+		Collider[] colliderList = Physics.OverlapBox (relativePos, new Vector3 (thickness, h.Hole_height / 2, thickness), Quaternion.identity, layerMask3D);
+		print ("Size of collider list " + colliderList.Length);
+		foreach (Collider hit in colliderList) {
+			if (hit.name.ToLower ().Contains ("wall")) {
+				print ("Hit with Wall " + hit.gameObject);
+				return hit.gameObject;
+			}
+		}
+		/*
 		for (int i = 0; i < walls.Length; i++)
 		{
 			//print ("Point pair array " + point_pairs_array [i][0] + " " + point_pairs_array[i][1]);
 			//if (contains(point_pairs_array[i], startNode) && contains(point_pairs_array[i], endNode))
-			print("Absolute position is " + abs_position);
+			print("Absolute position is " + h.Position);
 			print("Wall Renderer is " + walls[i].GetComponent<Renderer>().bounds);
-			Vector3 relativePos = new Vector3(abs_position.x, 2.5f, abs_position.y);
 
 			//PUNEET -> Changed your method of checking for window. Instead, just check if the wall overlaps that position.
 			//Slight issue and doesn't work in some odd cases when the 2D position is a little off and not exactly centered. 
@@ -243,23 +259,33 @@ public class WallGenerator : MonoBehaviour
 			{
 				return walls [i];
 			}
-		}
+		}*/
 		return null;
 	}
 
 	private void holeAddOrUpdate(GameObject wall, Hole hole)
 	{
+		print ("Inside add or update and wall is " + wall + " hole is " + hole);
+		print ("Wall holes dictionairy is size" + wall_holes.Count);
 		if (wall_holes.ContainsKey(wall))
 		{
+			print ("WALL HOLE CONTAINS KEY");
 			List<Hole> l = wall_holes[wall];
 			l.Add(hole);
 			wall_holes[wall] = l;
 		}
 		else
 		{
+			print ("WALL HOLE DOESNT CONTAINS KEY 1 ");
 			List<Hole> l = new List<Hole>();
+			print ("WALL HOLE CONTAINS KEY 2");
+
 			l.Add(hole);
+			print ("WALL HOLE CONTAINS KEY 3");
+
 			wall_holes.Add(wall, l);
+			print ("WALL HOLE CONTAINS KEY 4");
+
 		}
 	}
     void Start()
