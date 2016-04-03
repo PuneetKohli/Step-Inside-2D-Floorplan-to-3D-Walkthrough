@@ -3,7 +3,6 @@ using System.Collections;
 
 public class WallAttachableObject : HouseObject
 {
-
     public GameObject startNode, endNode;
     public float length;
     public float height;

@@ -11,11 +11,12 @@ public class MainMenuScrollView : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-        clickManager = GameObject.Find("2DManager").GetComponent<ClickManager>();
+        clickManager = GameObject.Find("UI Root").GetComponent<ClickManager>();
         print("Items in click manager is " + clickManager.getItemNames().Length);
 		foreach (string item in clickManager.getItemNames()) {
 			GameObject go = NGUITools.AddChild(gameObject, mainMenuItem);
             go.name = item;
+            print("Item is " + item);
 			go.GetComponentInChildren<UILabel>().text = item.ToUpper() + "S";
 			go.GetComponentInChildren<UISprite>().atlas = appUIAtlas;  
 			go.transform.GetChild(1).GetComponent<UISprite>().spriteName = item; 

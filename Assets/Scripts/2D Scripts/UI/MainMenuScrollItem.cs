@@ -7,7 +7,7 @@ public class MainMenuScrollItem : MonoBehaviour {
     ClickManager clickManager;
 
 	void Start () {
-        clickManager = GameObject.Find("2DManager").GetComponent<ClickManager>();
+        clickManager = GameObject.Find("UI Root").GetComponent<ClickManager>();
 	}
 	
 	// Update is called once per frame

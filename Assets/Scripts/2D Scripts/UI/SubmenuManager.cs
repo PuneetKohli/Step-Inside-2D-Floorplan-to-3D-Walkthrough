@@ -9,7 +9,7 @@ public class SubmenuManager : MonoBehaviour {
 
     // Use this for initialization
     void Start () {
-        clickManager = GameObject.Find("2DManager").GetComponent<ClickManager>();
+        clickManager = GameObject.Find("UI Root").GetComponent<ClickManager>();
         submenuTitle = GameObject.Find("Sub Menu Title");
         submenuScrollview = GameObject.Find("Sub Menu Scroll View");
         ReloadSubmenu(0);

@@ -6,7 +6,7 @@ using System.Linq;
 public class SubmenuDragDropItem : UIDragDropItem
 {
     public GameObject houseObject, attachableHouseObject;
-    Transform houseObjectContainer;
+    Transform houseObjectContainer, attachableObjectContainer;
     public LayerMask layerMask;
     GameObject realWorldItem = null;
     GameObject gameContainer;
@@ -18,18 +18,21 @@ public class SubmenuDragDropItem : UIDragDropItem
     {
         gameContainer = GameObject.Find("2DManager");
         houseObjectContainer = GameObject.Find("HouseObjectContainer").transform;
+        attachableObjectContainer = GameObject.Find("AttachableObjectContainer").transform;
+
         this.isDragging = true;
         if (originalParent.GetComponent<SubmenuItem>().category.Equals("windowsanddoor"))
         {
             this.realWorldItem = GameObject.Instantiate(attachableHouseObject);
             this.realWorldItem.GetComponent<HouseObject>().init(originalParent.GetComponent<SubmenuItem>().category, originalParent.name, true);
+            this.realWorldItem.transform.parent = attachableObjectContainer;
         }
         else
         {
             this.realWorldItem = GameObject.Instantiate(houseObject);
             this.realWorldItem.GetComponent<HouseObject>().init(originalParent.GetComponent<SubmenuItem>().category, originalParent.name, false);
+            this.realWorldItem.transform.parent = houseObjectContainer;
         }
-        this.realWorldItem.transform.parent = houseObjectContainer;
         base.OnDragDropStart();
 
     }

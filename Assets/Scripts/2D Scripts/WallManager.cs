@@ -7,7 +7,7 @@ public class WallManager : MonoBehaviour {
 
     public GameObject wallSprite;
     public GameObject nodeSprite;
-	public Transform wallContainer, nodeContainer;
+	public Transform wallContainer, nodeContainer, houseObjectcontainer, windowContainer;
     GameObject newWall;
     GameObject initialNode, currentNode;
 
@@ -33,6 +33,8 @@ public class WallManager : MonoBehaviour {
         tapRecognizer.gestureRecognizedEvent += (r) =>
 		{
 			//Debug.Log ("tap recognizer fired: " + r);
+            if(gameObject.activeInHierarchy)
+            {
 			if (gameObject.GetComponent<BoxCollider> ().bounds.Contains (transform.TransformPoint(GetCurrentMousePosition (r.startTouchLocation ()).GetValueOrDefault ()))) {
 				if (!isDrawing) {
 					didDraw = false;
@@ -60,7 +62,9 @@ public class WallManager : MonoBehaviour {
 			{
 				removeDrawingWall();
 			}
+            }
 		};
+
 
         TouchKit.addGestureRecognizer(tapRecognizer);
     }
@@ -306,6 +310,11 @@ public class WallManager : MonoBehaviour {
 		return nodeList;		
 	}
 
+    public List<GameObject> exportObjects()
+    {
+        return houseObjectList;
+    }
+
     public List<GameObject> exportWindows()
     {
 
@@ -339,6 +348,26 @@ public class WallManager : MonoBehaviour {
         }
         return windowList;
     }
+
+    public void Refresh()
+    {
+        nodeList.Clear();
+        nodeContainer.DestroyChildren();
+
+        wallList.Clear();
+        wallContainer.DestroyChildren();
+
+        windowList.Clear();
+        windowContainer.DestroyChildren();
+
+        houseObjectList.Clear();
+        houseObjectcontainer.DestroyChildren();
+
+        isDrawing = false;
+        didDraw = false;
+       
+    }
+
     /// <summary>
     /// Test whether two line segments intersect. If so, calculate the intersection point.
     /// <see cref="http://stackoverflow.com/a/14143738/292237"/>

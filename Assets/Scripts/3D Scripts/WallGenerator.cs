@@ -6,7 +6,7 @@ using Poly2Tri;
 
 public class WallGenerator : MonoBehaviour
 {
-
+    
     public float height = 5;
     public float thickness = 0.2f;
     private Dictionary<Vector3, List<GameObject>> nodes = new Dictionary<Vector3, List<GameObject>>();
@@ -17,8 +17,21 @@ public class WallGenerator : MonoBehaviour
     private List<int> new_tris = new List<int>();
     private int new_vert_count = 0;
     private Dictionary<Vector3, int> vertexIndices = new Dictionary<Vector3, int>();
-    // Use this for initialization
+    private Dictionary<GameObject, List<Hole>> wall_holes = new Dictionary<GameObject, List<Hole>>();
+    public LayerMask layerMask3D;
+    public GameObject _3DContainer;
 
+    public void Refresh()
+    {
+        nodes.Clear();
+        point_pairs_array = null;
+        walls = null;
+        new_verts.Clear();
+        new_tris.Clear();
+        new_vert_count = 0;
+        vertexIndices.Clear();
+        wall_holes.Clear();
+    }
 
     Vector3[][] initPointPairsFromNodes(List<GameObject> nodeList)
     {
@@ -36,37 +49,22 @@ public class WallGenerator : MonoBehaviour
         return point_pairs.ToArray();
     }
 
-
-    Vector3[][] init_point_pairs()
-    {
-        //List of list
-        List<Vector3[]> point_pairs = new List<Vector3[]>();
-        point_pairs.Add(new Vector3[] { new Vector3(0, 0, 0), new Vector3(5, 0, 0) });
-        point_pairs.Add(new Vector3[] { new Vector3(5, 0, 0), new Vector3(5, 0, 2) });
-        point_pairs.Add(new Vector3[] { new Vector3(5, 0, 5), new Vector3(5, 0, 2) });
-        point_pairs.Add(new Vector3[] { new Vector3(5, 0, 5), new Vector3(3, 0, 4) });
-        point_pairs.Add(new Vector3[] { new Vector3(3, 0, 4), new Vector3(1, 0, 5) });
-        point_pairs.Add(new Vector3[] { new Vector3(1, 0, 5), new Vector3(0, 0, 0) });
-        point_pairs.Add(new Vector3[] { new Vector3(3, 0, 2), new Vector3(5, 0, 2) });
-        point_pairs.Add(new Vector3[] { new Vector3(3, 0, 4), new Vector3(3, 0, 2) });
-
-        return point_pairs.ToArray();
-    }
-
-    public void generate3D(List<GameObject> nodeList, List<GameObject> windowList)
+    public void generate3D(List<GameObject> nodeList, List<GameObject> windowList, List<GameObject> houseObjectList)
     {
         point_pairs_array = initPointPairsFromNodes(nodeList);
         generateWalls();
-
-        //PUNEET -> Handled case for no windows
+        
         if(windowList.Count > 0)
         {
-            //PUNEET -> Handled multiple Windows; NOTE: It doesn't work when multiple windows on same wall. Pls check.
-            foreach (GameObject window in windowList)
-            {
-                addWindow(window);
-            }
+            addWindows(windowList);
         }
+
+        print("House object list size is : " + houseObjectList.Count);
+    }
+
+    private void generateHouseObjects()
+    {
+         //Resources.Load("furniture/3D/" + category + "/" + name) as Texture2D;
     }
 
     private void generateWalls()
@@ -75,22 +73,23 @@ public class WallGenerator : MonoBehaviour
         for (int i = 0; i < point_pairs_array.Length; i++)
         {
             GameObject wall_object = new GameObject();
+            wall_object.layer = 10;
             wall_object.name = "Wall " + i;
-            wall_object.transform.parent = this.transform;
+            wall_object.transform.parent = _3DContainer.transform;
             walls[i] = wall_object;
             WallFunctions wall_script = wall_object.AddComponent<WallFunctions>();
             wall_script.generateWall(point_pairs_array[i][0], point_pairs_array[i][1]);
-
+            
         }
         this.walls = walls;
         //Debug.Log (-3 % walls.Length);
         //adjust all walls
         foreach (GameObject wall_object in walls)
         {
-            addOrUpdate(wall_object.GetComponent<WallFunctions>().Start_pt, wall_object);
-            addOrUpdate(wall_object.GetComponent<WallFunctions>().End_pt, wall_object);
+            nodeAddOrUpdate(wall_object.GetComponent<WallFunctions>().Start_pt, wall_object);
+            nodeAddOrUpdate(wall_object.GetComponent<WallFunctions>().End_pt, wall_object);
         }
-
+        
         List<GameObject>[] node_values = nodes.Values.ToArray();
         Vector3[] node_points = nodes.Keys.ToArray();
         //walls[2].GetComponent<WallFunctions>().addHole();
@@ -102,19 +101,19 @@ public class WallGenerator : MonoBehaviour
                 Vector3 start = getStart(coincident_walls[j]);
                 Vector3 end = getEnd(coincident_walls[j]);
                 Vector3 otherPoint = start == node_points[i] ? end : start;
-
+                
                 float angle = Vector3.Angle(otherPoint - node_points[i], new Vector3(1, 0, 0));
                 Vector3 cross = Vector3.Cross(otherPoint - node_points[i], new Vector3(1, 0, 0));
                 if (cross.y < 0) angle = -angle;
-
-
+                
+                
                 coincident_walls[j].GetComponent<WallFunctions>().Angle = angle;
             }
             if (coincident_walls.Length < 3)
                 coincident_walls = coincident_walls.OrderBy(w => w.GetComponent<WallFunctions>().Angle).ToArray();
             else
                 coincident_walls = coincident_walls.OrderByDescending(w => w.GetComponent<WallFunctions>().Angle).ToArray();
-
+            
             alternator = false;
             Debug.Log("Point : " + node_points[i]);
             if (coincident_walls.Length > 1)
@@ -128,63 +127,65 @@ public class WallGenerator : MonoBehaviour
             }
         }
         //Floor
-        List<Point> p = new List<Point>();
-        for (int i = 0; i < node_points.Length; i++)
-        {
-            Point s = new Point();
-            s.X = node_points[i].x;
-            s.Y = node_points[i].z;
-            p.Add(s);
-        }
-
-        Point[] ch = ConvexHull.CH2(p).ToArray();
-        Vector2[] floor_vertices = new Vector2[ch.Length - 1];
-
-        for (int i = 0; i < ch.Length - 1; i++)
-        {
-            floor_vertices[i] = new Vector2(ch[i].X, ch[i].Y);
-            Debug.Log(floor_vertices[i]);
-        }
-
-        GameObject floor = new GameObject();
-        floor.name = "Floor";
-        floor.transform.parent = this.transform;
-        floor.AddComponent<MeshFilter>();
-        floor.AddComponent<MeshRenderer>();
-
-        Mesh floor_m = floor.GetComponent<MeshFilter>().mesh;
-
-        Polygon floor_poly = createPoly(floor_vertices);
-        P2T.Triangulate(floor_poly);
-
-        for (int i = 0; i < floor_poly.Triangles.Count; i++)
-            for (int j = 0; j < 3; j++)
-            {
-                TriangulationPoint tpt = floor_poly.Triangles[i].Points[j];
-                Vector3 pt = new Vector3((float)tpt.X, 0, (float)tpt.Y);
-                new_tris.Add(vertexIndices[pt]);
+        if (point_pairs_array.Length > 2) {
+            List<Point> p = new List<Point> ();
+            for (int i = 0; i < node_points.Length; i++) {
+                Point s = new Point ();
+                s.X = node_points [i].x;
+                s.Y = node_points [i].z;
+                p.Add (s);
             }
+            
+            Point[] ch = ConvexHull.CH2 (p).ToArray ();
+            Vector2[] floor_vertices = new Vector2[ch.Length - 1];
+            
+            for (int i = 0; i < ch.Length - 1; i++) {
+                floor_vertices [i] = new Vector2 (ch [i].X, ch [i].Y);
+                Debug.Log (floor_vertices [i]);
+            }
+            
+            GameObject floor = new GameObject ();
+            floor.name = "Floor";
+            floor.transform.parent = _3DContainer.transform;
+            floor.AddComponent<MeshFilter> ();
+            floor.AddComponent<MeshRenderer> ();
+            
+            Mesh floor_m = floor.GetComponent<MeshFilter> ().mesh;
+            
+            Polygon floor_poly = createPoly (floor_vertices);
+            P2T.Triangulate (floor_poly);
+            
+            for (int i = 0; i < floor_poly.Triangles.Count; i++)
+            for (int j = 0; j < 3; j++) {
+                TriangulationPoint tpt = floor_poly.Triangles [i].Points [j];
+                Vector3 pt = new Vector3 ((float)tpt.X, 0, (float)tpt.Y);
+                new_tris.Add (vertexIndices [pt]);
+            }
+            
+            floor_m.vertices = new_verts.ToArray ();
+            int[] tris = new_tris.ToArray ();
+            for (int i = 0; i < tris.Length; i += 3) {
+                int temp = tris [i + 1];
+                tris [i + 1] = tris [i + 2];
+                tris [i + 2] = temp;
+            }
+            floor_m.triangles = tris;
+            floor_m.RecalculateNormals ();
 
-        floor_m.vertices = new_verts.ToArray();
-        int[] tris = new_tris.ToArray();
-        for (int i = 0; i < tris.Length; i += 3)
-        {
-            int temp = tris[i + 1];
-            tris[i + 1] = tris[i + 2];
-            tris[i + 2] = temp;
+            //assign material
+            /*Material newMat = new Material(Shader.Find("Standard"));
+            //Resources.Load("meshgen material", typeof(Material)) as Material;
+            MeshRenderer renderer = floor.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial = newMat;*/
+            Material newMat = new Material(Shader.Find("Standard"));//GetDefaultMaterial();
+            newMat.color = Color.gray;
+            floor.GetComponent<MeshRenderer>().material = newMat;
+            
+            //PUNEET -> Added Mesh Collider to floor
+            floor.AddComponent<MeshCollider> ();
+            floor.GetComponent<MeshCollider> ().sharedMesh = floor_m;
+            floor.layer = 10;
         }
-        floor_m.triangles = tris;
-        floor_m.RecalculateNormals();
-        Material newMat = Resources.Load("floorMaterial.mat", typeof(Material)) as Material;
-        Debug.Log(newMat);
-        MeshRenderer renderer = floor.GetComponent<MeshRenderer>();
-        renderer.materials[0] = newMat;
-        //floor.AddComponent<Material> = new Material ();
-
-        //PUNEET -> Added Mesh Collider to floor
-        floor.AddComponent<MeshCollider>();
-        floor.GetComponent<MeshCollider>().sharedMesh = floor_m;
-
     }
     private Polygon createPoly(Vector2[] points)
     {
@@ -200,35 +201,33 @@ public class WallGenerator : MonoBehaviour
         Polygon P = new Polygon(polyPoints);
         return P;
     }
-
-    public void addWindow(GameObject window)
+    
+    public void addWindows(List<GameObject> windows)
     {
-        Vector3 abs_position = window.transform.position;
-        Vector3 startNode = swapVectorYZ(window.GetComponent<WallAttachableObject>().startNode.transform.position);
-        Vector3 endNode = swapVectorYZ(window.GetComponent<WallAttachableObject>().endNode.transform.position);
-        float holeLength = window.GetComponent<WallAttachableObject>().length;
-        float holeHeight = window.GetComponent<WallAttachableObject>().height;
-        float holeElevation = window.GetComponent<WallAttachableObject>().elevation;
-        for (int i = 0; i < walls.Length; i++)
-        {
-            //print ("Point pair array " + point_pairs_array [i][0] + " " + point_pairs_array[i][1]);
-            //if (contains(point_pairs_array[i], startNode) && contains(point_pairs_array[i], endNode))
-            print("Absolute position is " + abs_position);
-            print("Wall Renderer is " + walls[i].GetComponent<Renderer>().bounds);
-            Vector3 relativePos = new Vector3(abs_position.x, 2.5f, abs_position.y);
-
-            //PUNEET -> Changed your method of checking for window. Instead, just check if the wall overlaps that position.
-            //Slight issue and doesn't work in some odd cases when the 2D position is a little off and not exactly centered. 
-            //Solution could be -> If "NOT FOUND" perform the startNode and endNode check which you were previously doing
-            if(walls[i].GetComponent<Renderer>().bounds.Contains(relativePos))
-            {
-                Vector3 wall_position = walls[i].GetComponent<WallFunctions>().Start_pt;
-                walls[i].GetComponent<WallFunctions>().addHole(abs_position - wall_position, holeLength, holeHeight, holeElevation);
-                //Debug.Log ("Found " + walls[i].name);
-                return;
+        foreach (GameObject window in windows) {
+            
+            Hole h = new Hole ();
+            h.Position = window.transform.position;
+            h.Hole_length = window.GetComponent<WallAttachableObject>().length;
+            h.Hole_height = window.GetComponent<WallAttachableObject>().height;
+            h.Hole_elevation = window.GetComponent<WallAttachableObject>().elevation;
+            //Vector3 startNode = swapVectorYZ(window.GetComponent<WallAttachableObject>().startNode.transform.position);
+            //Vector3 endNode = swapVectorYZ(window.GetComponent<WallAttachableObject>().endNode.transform.position);
+            GameObject w = liesOn (h);
+            h.Position = swapVectorYZ(window.transform.position);
+            
+            if (w != null) {
+                holeAddOrUpdate (w, h);
             }
+            else 
+                Debug.Log("Not Found");
         }
-        Debug.Log("Not Found");
+        if (wall_holes.Count > 0) {
+            foreach (KeyValuePair<GameObject, List<Hole>> entry in wall_holes) {
+                Debug.Log ("Sent holes : " + entry.Value.Count );
+                entry.Key.GetComponent<WallFunctions> ().addHoles (entry.Value);
+            }
+        }  
     }
     private bool contains(Vector3[] array, Vector3 vect)
     {
@@ -237,29 +236,66 @@ public class WallGenerator : MonoBehaviour
                 return true;
         return false;
     }
+    private GameObject liesOn (Hole h) {
+        Vector3 relativePos = new Vector3(h.Position.x, 2.5f, h.Position.y);
+        //RaycastHit[] hitList = Physics.BoxCastAll (relativePos, new Vector3 (h.Hole_length / 2, h.Hole_height / 2, thickness), Vector3.down, layerMask3D);
+        //print ("Hit list count is " + hitList.Length);
+        print("Box pos is  " + relativePos + " " + new Vector3 (thickness, h.Hole_height / 2, thickness));
+        
+        Collider[] colliderList = Physics.OverlapBox (relativePos, new Vector3 (thickness, h.Hole_height / 2, thickness), Quaternion.identity, layerMask3D);
+        print ("Size of collider list " + colliderList.Length);
+        foreach (Collider hit in colliderList) {
+            if (hit.name.ToLower ().Contains ("wall")) {
+                print ("Hit with Wall " + hit.gameObject);
+                return hit.gameObject;
+            }
+        }
+        /*
+        for (int i = 0; i < walls.Length; i++)
+        {
+            //print ("Point pair array " + point_pairs_array [i][0] + " " + point_pairs_array[i][1]);
+            //if (contains(point_pairs_array[i], startNode) && contains(point_pairs_array[i], endNode))
+            print("Absolute position is " + h.Position);
+            print("Wall Renderer is " + walls[i].GetComponent<Renderer>().bounds);
 
-
-    void Start()
+            //PUNEET -> Changed your method of checking for window. Instead, just check if the wall overlaps that position.
+            //Slight issue and doesn't work in some odd cases when the 2D position is a little off and not exactly centered. 
+            //Solution could be -> If "NOT FOUND" perform the startNode and endNode check which you were previously doing
+            if(walls[i].GetComponent<Renderer>().bounds.Contains(relativePos))
+            {
+                return walls [i];
+            }
+        }*/
+        return null;
+    }
+    
+    private void holeAddOrUpdate(GameObject wall, Hole hole)
     {
-        //Vector3[][] point_pairs_array = init_point_pairs ();
+        print ("Inside add or update and wall is " + wall + " hole is " + hole);
+        print ("Wall holes dictionairy is size" + wall_holes.Count);
+        if (wall_holes.ContainsKey(wall))
+        {
+            print ("WALL HOLE CONTAINS KEY");
+            List<Hole> l = wall_holes[wall];
+            l.Add(hole);
+            wall_holes[wall] = l;
+        }
+        else
+        {
+            print ("WALL HOLE DOESNT CONTAINS KEY 1 ");
+            List<Hole> l = new List<Hole>();
+            print ("WALL HOLE CONTAINS KEY 2");
+            
+            l.Add(hole);
+            print ("WALL HOLE CONTAINS KEY 3");
+            
+            wall_holes.Add(wall, l);
+            print ("WALL HOLE CONTAINS KEY 4");
+            
+        }
     }
 
-    //draw corner points using gizmos 
-    /*void OnDrawGizmos() {
-		this.point_pairs_array = init_point_pairs();
-		//init_corners ();
-		Gizmos.color = Color.black;
-		for (int i = 0; i < point_pairs_array.Length; i++) {
-			Gizmos.DrawSphere(point_pairs_array[i][0], 0.1f);
-			Gizmos.DrawSphere(point_pairs_array[i][1], 0.1f);
-		}
-			
-	}*/
-    void Awake()
-    {
-        this.point_pairs_array = init_point_pairs();
-    }
-    private void addOrUpdate(Vector3 corner, GameObject wall)
+    private void nodeAddOrUpdate(Vector3 corner, GameObject wall)
     {
         if (nodes.ContainsKey(corner))
         {
@@ -274,42 +310,42 @@ public class WallGenerator : MonoBehaviour
             nodes.Add(corner, l);
         }
     }
-
+    
     private void adjustShape(GameObject a, GameObject b, Vector3 point)
     {
         float angle = a.GetComponent<WallFunctions>().Angle - b.GetComponent<WallFunctions>().Angle;
         int baseA, baseB, dupli_baseA, dupli_baseB;
-
+        
         //angle adjustments
         if (angle > 180)
         {
             angle = -(angle - 180);
         }
-
+        
         if (angle < -180)
         {
             angle = (angle + 360);
         }
         //Debug.Log (angle);
-
+        
         Mesh meshA = a.GetComponent<MeshFilter>().mesh;
         Mesh meshB = b.GetComponent<MeshFilter>().mesh;
-
+        
         Vector3[] vertsA = meshA.vertices;
         int ovlA = a.GetComponent<WallFunctions>().Ovl;
         Vector3[] vertsB = meshB.vertices;
         int ovlB = b.GetComponent<WallFunctions>().Ovl;
-
+        
         float ext = (thickness / 2) / Mathf.Tan(angle * Mathf.Deg2Rad / 2);
-
+        
         //Debug.Log (ext);
         //if (Mathf.Abs (angle) > 90)
-        //	ext = -ext;
-
+        //  ext = -ext;
+        
         //Debug.Log (a.name + " " + b.name + " : " + ext);
         bool isStartA = isStart(a, point);
         bool isStartB = isStart(b, point);
-
+        
         if (isStartA)
         {
             baseA = ovlA;
@@ -320,7 +356,7 @@ public class WallGenerator : MonoBehaviour
             baseA = 0;
             dupli_baseA = 2 * ovlA;
         }
-
+        
         if (!isStartB)
         {
             baseB = ovlB;
@@ -331,16 +367,16 @@ public class WallGenerator : MonoBehaviour
             baseB = 0;
             dupli_baseB = 2 * ovlB;
         }
-
+        
         //subtract positive z direction vector from close-to-angle edge of A
         Vector3 ext_vector = new Vector3(0, 0, ext);
-
+        
         if (isStartA)
         {
             vertsA[baseA + 0] += ext_vector;
             vertsA[dupli_baseA + 0] += ext_vector;
             vertsA[dupli_baseA + 19] += ext_vector;
-
+            
             vertsA[baseA + 1] += ext_vector;
             vertsA[dupli_baseA + 1] += ext_vector;
             vertsA[dupli_baseA + 6] += ext_vector;
@@ -350,19 +386,19 @@ public class WallGenerator : MonoBehaviour
             vertsA[baseA + 2] -= ext_vector;
             vertsA[dupli_baseA + 7] -= ext_vector;
             vertsA[dupli_baseA + 12] -= ext_vector;
-
+            
             vertsA[baseA + 3] -= ext_vector;
             vertsA[dupli_baseA + 13] -= ext_vector;
             vertsA[dupli_baseA + 18] -= ext_vector;
-
+            
         }
-
+        
         if (isStartB)
         {
             vertsB[baseB + 0] += ext_vector;
             vertsB[dupli_baseB + 0] += ext_vector;
             vertsB[dupli_baseB + 19] += ext_vector;
-
+            
             vertsB[baseB + 1] += ext_vector;
             vertsB[dupli_baseB + 1] += ext_vector;
             vertsB[dupli_baseB + 6] += ext_vector;
@@ -372,17 +408,17 @@ public class WallGenerator : MonoBehaviour
             vertsB[baseB + 2] -= ext_vector;
             vertsB[dupli_baseB + 7] -= ext_vector;
             vertsB[dupli_baseB + 12] -= ext_vector;
-
+            
             vertsB[baseB + 3] -= ext_vector;
             vertsB[dupli_baseB + 13] -= ext_vector;
             vertsB[dupli_baseB + 18] -= ext_vector;
         }
         meshA.vertices = vertsA;
         meshB.vertices = vertsB;
-
-
-
-
+        
+        
+        
+        
     }
     private bool isStart(GameObject a, Vector3 point)
     {
@@ -393,16 +429,16 @@ public class WallGenerator : MonoBehaviour
     {
         return a.GetComponent<WallFunctions>().Start_pt;
     }
-
+    
     private Vector3 getEnd(GameObject a)
     {
         return a.GetComponent<WallFunctions>().End_pt;
     }
     void Update()
     {
-
+        
     }
-
+    
     Vector3 swapVectorYZ(Vector3 vectorToSwap)
     {
         float z = vectorToSwap.z;
@@ -435,11 +471,11 @@ class ConvexHull
     {
         return CH2(points, false);
     }
-
+    
     public static List<Point> CH2(List<Point> points, bool removeFirst)
     {
         List<Point> vertices = new List<Point>();
-
+        
         if (points.Count == 0)
             return null;
         else if (points.Count == 1)
@@ -448,43 +484,43 @@ class ConvexHull
             vertices.Add(points[0]);
             return vertices;
         }
-
-
+        
+        
         Point leftMost = CH2Init(points);
         vertices.Add(leftMost);
-
+        
         Point prev = leftMost;
         Point? next;
         double rot = 0;
         do
         {
             next = CH2Step(prev, points, ref rot);
-
+            
             // If it's not the first vertex (leftmost) or we want spiral (instead of CH2)
             // remove it
             if (prev != leftMost || removeFirst)
                 points.Remove(prev);
-
+            
             // If this isn't the last vertex, save it
             if (next.HasValue)
             {
                 vertices.Add(next.Value);
                 prev = next.Value;
             }
-
+            
         } while (points.Count > 0 && next.HasValue && next.Value != leftMost);
         points.Remove(leftMost);
-
+        
         return vertices;
-
+        
     }
-
+    
     private static Point CH2Init(List<Point> points)
     {
         // Initialization - Find the leftmost point
         Point leftMost = points[0];
         double leftX = leftMost.X;
-
+        
         foreach (Point p in points)
         {
             if (p.X < leftX)
@@ -495,27 +531,27 @@ class ConvexHull
         }
         return leftMost;
     }
-
+    
     private static Point? CH2Step(Point currentPoint, List<Point> points, ref double rot)
     {
         double angle, angleRel, smallestAngle = 2 * Mathf.PI, smallestAngleRel = 4 * Mathf.PI;
         Point? chosen = null;
         float xDiff, yDiff;
-
+        
         foreach (Point candidate in points)
         {
             if (candidate == currentPoint)
                 continue;
-
+            
             xDiff = candidate.X - currentPoint.X;
             yDiff = -(candidate.Y - currentPoint.Y); //Y-axis starts on top
             angle = ComputeAngle(new Point(xDiff, yDiff));
-
+            
             // angleRel is the angle between the line and the rotated y-axis
             // y-axis has the direction of the last computed supporting line
             // given by variable rot.
             angleRel = 2 * Mathf.PI - (rot - angle);
-
+            
             if (angleRel >= 2 * Mathf.PI)
                 angleRel -= 2 * Mathf.PI;
             if (angleRel < smallestAngleRel)
@@ -524,17 +560,17 @@ class ConvexHull
                 smallestAngle = angle;
                 chosen = candidate;
             }
-
+            
         }
-
+        
         // Save the smallest angle as the rotation of the y-axis for the
         // computation of the next supporting line.
         rot = smallestAngle;
-
+        
         return chosen;
     }
-
-
+    
+    
     private static double ComputeAngle(Point p)
     {
         if (p.X > 0 && p.Y > 0)
@@ -556,7 +592,67 @@ class ConvexHull
         else
             return 0;
     }
-
-
-
+    
+    
+    
+}
+public class Hole {
+    private int hole_start_index;
+    private int hole_end_index;
+    private float hole_length = 1;
+    private float hole_height = 1;
+    private float hole_elevation = 2;
+    private Vector3 position;
+    public int Hole_end_index {
+        get {
+            return this.hole_end_index;
+        }
+        set {
+            hole_end_index = value;
+        }
+    }
+    public int Hole_start_index {
+        get {
+            return this.hole_start_index;
+        }
+        set {
+            hole_start_index = value;
+            hole_end_index = value + 4;
+        }
+    }
+    
+    public float Hole_length {
+        get {
+            return this.hole_length;
+        }
+        set {
+            hole_length = value;
+        }
+    }
+    
+    public float Hole_height {
+        get {
+            return this.hole_height;
+        }
+        set {
+            hole_height = value;
+        }
+    }
+    
+    public float Hole_elevation {
+        get {
+            return this.hole_elevation;
+        }
+        set {
+            hole_elevation = value;
+        }
+    }
+    public Vector3 Position {
+        get {
+            return this.position;
+        }
+        set {
+            position = value;
+        }
+    }
 }
