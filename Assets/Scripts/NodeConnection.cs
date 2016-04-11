@@ -5,23 +5,23 @@ using Parse;
 public class NodeConnection : ParseObject
 {
     [ParseFieldName("end_node")]
-    public string EndNode
+    public NodeParseObject EndNode
     {
-        get { return GetProperty<ParseObject>("EndNode"); }
-        set { SetProperty<ParseObject>(value, "EndNode"); }
+        get { return GetProperty<NodeParseObject>("EndNode"); }
+        set { SetProperty<NodeParseObject>(value, "EndNode"); }
     }
     
     [ParseFieldName("start_node")]
-    public string StartNode
+    public NodeParseObject StartNode
     {
-        get { return GetProperty<ParseObject>("StartNode"); }
-        set { SetProperty<ParseObject>(value, "StartNode"); }
+        get { return GetProperty<NodeParseObject>("StartNode"); }
+        set { SetProperty<NodeParseObject>(value, "StartNode"); }
     }
     
     [ParseFieldName("plan_id")]
-    public string PlanId
+    public Plan PlanId
     {
-        get { return GetProperty<ParseObject>("PlanId"); }
-        set { SetProperty<double>(value, "PlanId"); }
+        get { return GetProperty<Plan>("PlanId"); }
+        set { SetProperty<Plan>(value, "PlanId"); }
     }
 }
