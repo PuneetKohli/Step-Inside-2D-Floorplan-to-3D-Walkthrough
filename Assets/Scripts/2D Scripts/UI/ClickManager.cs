@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using System.Linq;
+using System.Collections;
 using System.Collections.Generic;
+using Parse;
 
 public class ClickManager : MonoBehaviour {
 
@@ -24,8 +26,9 @@ public class ClickManager : MonoBehaviour {
     WallGenerator wallGenerator;
 
 
-	// Use this for initialization
-	void Awake () {
+    // Use this for initialization
+    void Awake () {
+
         _3DRoot = GameObject.Find("3D Root");
         wallGenerator = _3DRoot.GetComponent<WallGenerator>();
         isoCam = _3DRoot.transform.Find("Isocam").gameObject as GameObject;
@@ -57,7 +60,7 @@ public class ClickManager : MonoBehaviour {
         List<GameObject> nodeList = wallManager.exportNodes();
         List<GameObject> windowList = wallManager.exportWindows();
         List<GameObject> objectList = wallManager.exportObjects();
-        saveToParse(nodeList, windowList, objectList);
+        StartCoroutine(saveToParse(nodeList, windowList, objectList,  null));
         print("3d view!");
         _3DRoot.SetActive(true);
         print("Wall generator is" + wallGenerator + " Wall manager is " + wallManager);
@@ -125,36 +128,153 @@ public class ClickManager : MonoBehaviour {
         isoCam.SetActive(false);
     }
 
-    void saveToParse(List<GameObject> nodeList, List<GameObject> windowList, List<GameObject> objectList)
+    /*void saveToParse(List<GameObject> nodeList, List<GameObject> windowList, List<GameObject> objectList, Plan currentPlan)
     {
-        //For saving to the "Node" object in parse, directly save nodeList
-        foreach (GameObject node in nodeList)
-        {
-            //node.transform.position.x //<---xpos
-            //node.transform.position.y //<---ypos
-            foreach(GameObject adjacentNode in node.GetComponent<Node>().adjacentNodes) //<--- for NodeConnection
-            {
-                //start_node = node
-                //end_node = adjacentNode
-            }
+        List<NodeParseObject> curNodes = new List<NodeParseObject>(); 
+
+        foreach (GameObject node in nodeList) {
+
+            var curNode = new NodeParseObject
+            { 
+                Xpos = node.transform.position.x,
+                Ypos = node.transform.position.y,
+                PlanId = currentPlan
+            };
+
+            curNodes.Add(curNode);
         }
+
+        List<Node> nodeComponentList = new List<Node>();
+        for (int i = 0; i < nodeList.Count; i++)
+        {
+            nodeComponentList.Add(nodeList[i].GetComponent<Node>());
+        }
+
+        ParseObject.SaveAllAsync(curNodes).ContinueWith(t =>
+        {
+            print("Entered save all");    
+            for(int i = 0; i < nodeList.Count; i++)
+            {
+                foreach(GameObject adjacentNode in nodeComponentList[i].adjacentNodes) //<--- for NodeConnection
+                {
+                    print("Entered its adjacent nodes");
+                    foreach (NodeParseObject tempnode in curNodes) {
+                        print("Checking cur node tempnodes");
+                        if(adjacentNode.transform.position.x == tempnode.Xpos && adjacentNode.transform.position.y == tempnode.Ypos) {
+                            var nodeConnection = new NodeConnection();
+                            nodeConnection.StartNode = curNodes[i];
+                            nodeConnection.EndNode = tempnode;
+                            nodeConnection.PlanId = null;
+                            nodeConnection.SaveAsync();
+                            break;
+                        }
+                    }
+                }
+
+            }    
+        });
 
         foreach (GameObject window in windowList)
         {
-            //is_attached = true
-            //window.transform.position,x <--- xpos
-            //window.transform.position.y <--- ypos
-            //window.GetComponent<HouseObject>().category <-- category
-            //window.transform.rotation.z <-- rotation
+            var windowObject = new HouseParseObject();
+            windowObject.Name = window.name;
+            windowObject.Rotation = window.transform.rotation.z;
+            windowObject.Xpos = window.transform.position.x;
+            windowObject.Ypos = window.transform.position.y;
+            windowObject.Category = window.GetComponent<HouseObject>().category;
+            windowObject.PlanId = currentPlan;
+            windowObject.Isattached = true;
+            windowObject.SaveAsync();
         }
 
         foreach (GameObject houseObject in objectList)
         {
-            //is_attached = false
-            //houseObject.transform.position,x <--- xpos
-            //houseObject.transform.position.y <--- ypos
-            //houseObject.GetComponent<HouseObject>().category <-- category
-            //houseObject.transform.rotation.z <-- rotation
+            var houseParseObject = new HouseParseObject();
+            houseParseObject.Name =  houseObject.name;
+            houseParseObject.Rotation = houseObject.transform.rotation.z;
+            houseParseObject.Xpos = houseObject.transform.position.x;
+            houseParseObject.Ypos = houseObject.transform.position.y;
+            houseParseObject.Category = houseObject.GetComponent<HouseObject>().category;
+            houseParseObject.PlanId = currentPlan;
+            houseParseObject.Isattached = false;
+            houseParseObject.SaveAsync();
+        }
+    }*/
+
+    IEnumerator saveToParse(List<GameObject> nodeList, List<GameObject> windowList, List<GameObject> objectList, Plan currentPlan)
+    {
+        List<NodeParseObject> curNodes = new List<NodeParseObject>(); 
+
+        foreach (GameObject node in nodeList)
+        {
+
+            var curNode = new NodeParseObject
+            { 
+                Xpos = node.transform.position.x,
+                Ypos = node.transform.position.y,
+                PlanId = currentPlan
+            };
+
+            curNodes.Add(curNode);
+        }
+
+        List<Node> nodeComponentList = new List<Node>();
+        for (int i = 0; i < nodeList.Count; i++)
+        {
+            nodeComponentList.Add(nodeList [i].GetComponent<Node>());
+        }
+
+        var saveTask = ParseObject.SaveAllAsync(curNodes);
+        while (!saveTask.IsCompleted)
+            yield return null;
+
+        //Save completed
+        print("Entered save all");    
+        for (int i = 0; i < nodeList.Count; i++)
+        {
+            foreach (GameObject adjacentNode in nodeComponentList[i].adjacentNodes) //<--- for NodeConnection
+            {
+                print("Entered its adjacent nodes");
+                foreach (NodeParseObject tempnode in curNodes)
+                {
+                    print("Checking cur node tempnodes");
+                    if (adjacentNode.transform.position.x == tempnode.Xpos && adjacentNode.transform.position.y == tempnode.Ypos)
+                    {
+                        var nodeConnection = new NodeConnection();
+                        nodeConnection.StartNode = curNodes [i];
+                        nodeConnection.EndNode = tempnode;
+                        nodeConnection.PlanId = null;
+                        nodeConnection.SaveAsync();
+                        break;
+                    }
+                }
+            }
+        }       
+
+        foreach (GameObject window in windowList)
+        {
+            var windowObject = new HouseParseObject();
+            windowObject.Name = window.name;
+            windowObject.Rotation = window.transform.rotation.z;
+            windowObject.Xpos = window.transform.position.x;
+            windowObject.Ypos = window.transform.position.y;
+            windowObject.Category = window.GetComponent<HouseObject>().category;
+            windowObject.PlanId = currentPlan;
+            windowObject.Isattached = true;
+            windowObject.SaveAsync();
+        }
+
+        foreach (GameObject houseObject in objectList)
+        {
+            var houseParseObject = new HouseParseObject();
+            houseParseObject.Name = houseObject.name;
+            houseParseObject.Rotation = houseObject.transform.rotation.z;
+            houseParseObject.Xpos = houseObject.transform.position.x;
+            houseParseObject.Ypos = houseObject.transform.position.y;
+            houseParseObject.Category = houseObject.GetComponent<HouseObject>().category;
+            houseParseObject.PlanId = currentPlan;
+            houseParseObject.Isattached = false;
+            houseParseObject.SaveAsync();
         }
     }
 }
