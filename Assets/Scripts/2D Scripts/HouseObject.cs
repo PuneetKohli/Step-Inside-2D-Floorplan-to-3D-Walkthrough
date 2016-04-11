@@ -9,7 +9,7 @@ public class HouseObject : MonoBehaviour {
     public Color placable, notPlacable;
     public LayerMask layerMask;
     protected WallManager wallManager;
-    protected string category;
+    public string category;
 
     void OnEnable()
     {

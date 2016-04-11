@@ -60,6 +60,11 @@ public class WallGenerator : MonoBehaviour
         }
 		adjustWalls ();
 		generateFloor ();
+        if (houseObjectList.Count > 0)
+        {
+            addHouseObjects(houseObjectList);
+        }
+
         print("House object list size is : " + houseObjectList.Count);
     }
 
@@ -208,7 +213,22 @@ public class WallGenerator : MonoBehaviour
         Polygon P = new Polygon(polyPoints);
         return P;
     }
-    
+
+    public void addHouseObjects(List<GameObject> houseObjects)
+    {
+        foreach (GameObject houseObject in houseObjects)
+        {
+            string category = houseObject.GetComponent<HouseObject>().category;
+            GameObject container = Instantiate(Resources.Load("furniture/3D_Models/" + category + "Container")) as GameObject;
+            container.transform.position = swapVectorYZ(houseObject.transform.position);
+            container.transform.parent = _3DContainer.transform;
+            Vector3 newYVector = container.transform.position;
+            newYVector.y += 1;
+            container.transform.position = newYVector;
+            container.GetComponent<HouseObject3D>().setModel(houseObject.name);
+        }
+    }
+
     public void addWindows(List<GameObject> windows)
     {
         foreach (GameObject window in windows) {

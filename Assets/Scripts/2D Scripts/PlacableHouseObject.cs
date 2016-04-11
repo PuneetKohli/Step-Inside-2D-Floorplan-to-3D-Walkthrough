@@ -29,7 +29,6 @@ public class PlacableHouseObject : HouseObject
     protected override void PlaceObject()
     {
         wallManager.houseObjectList.Add(gameObject);
-        gameObject.name += (wallManager.houseObjectList.Count - 1);
         base.PlaceObject();
     }    
 }
