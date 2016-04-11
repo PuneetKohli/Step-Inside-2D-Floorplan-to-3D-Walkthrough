@@ -18,15 +18,15 @@ public class WallFunctions : MonoBehaviour
     private List<Vector3> new_verts = new List<Vector3>();
     private List<int> new_tris = new List<int>();
     private int new_vert_count = 0;
-    private List<Hole> hole_list = new List<Hole> ();
+    public List<Hole> hole_list = new List<Hole> ();
     private int hole_start_index = 4;
     private int hole_end_index = 8;
     private int ovl;
     public float hole_length = 1;
     public float hole_height = 1;
     public float hole_elevation = 2;
-    private bool has_hole = false;
     private Polygon latest_face = null;
+	public float tilingfactor = 1;
     public int Ovl
     {
         get
@@ -110,13 +110,17 @@ public class WallFunctions : MonoBehaviour
         //extrude mesh
         mesh = this.extrudeWall(mesh);
         mesh.RecalculateNormals();
-        
-        //adjust wall parameters
+
+		//adjust wall parameters
         
         
         //assign material
         Material newMat = new Material(Shader.Find("Standard"));//GetDefaultMaterial();
         newMat.color = Color.white;
+
+		//apply texture
+		newMat.mainTexture = (Texture2D) Resources.Load ("textures/tex1");
+		newMat.mainTexture.wrapMode = TextureWrapMode.Repeat;
 
         //Resources.Load("meshgen material", typeof(Material)) as Material;
         //newMat.EnableKeyword("_EMISSION");
@@ -132,62 +136,7 @@ public class WallFunctions : MonoBehaviour
         gameObject.AddMissingComponent<MeshCollider>().sharedMesh = mesh;
     }
     
-    public void addHole(Vector3 position, float hole_length, float hole_height, float hole_elevation)
-    {
-        Mesh mesh = GetComponent<MeshFilter>().mesh;
-        float distance = position.magnitude;
-        //distance = 1;
-        
-        if (distance > (length - hole_length / 2) || distance < hole_length / 2)
-        {
-            Debug.Log("Hole exceeds " + this.name);
-        }
-        else
-        {
-            List<Vector2> rectanglePoints = new List<Vector2>();
-            List<Vector2> holePoints = new List<Vector2>();
-            
-            rectanglePoints.Add(new Vector2(0, 0));
-            rectanglePoints.Add(new Vector2(0, height));
-            rectanglePoints.Add(new Vector2(length, height));
-            rectanglePoints.Add(new Vector2(length, 0));
-            
-            holePoints.Add(new Vector2(distance - hole_length / 2, hole_elevation - hole_height / 2));
-            holePoints.Add(new Vector2(distance - hole_length / 2, hole_elevation + hole_height / 2));
-            holePoints.Add(new Vector2(distance + hole_length / 2, hole_elevation + hole_height / 2));
-            holePoints.Add(new Vector2(distance + hole_length / 2, hole_elevation - hole_height / 2));
-            
-            Polygon Rectangle = createPoly(rectanglePoints.ToArray());
-            Polygon Hole = createPoly(holePoints.ToArray());
-            
-            
-            Rectangle.AddHole(Hole);
-            P2T.Triangulate(Rectangle);
-            //Debug.Log ("here");
-            for (int i = 0; i < Rectangle.Triangles.Count; i++)
-                for (int j = 0; j < 3; j++)
-            {
-                TriangulationPoint tpt = Rectangle.Triangles[i].Points[j];
-                Vector3 pt = new Vector3(-thickness / 2, (float)tpt.Y, (float)tpt.X);
-                new_tris.Add(vertexIndices[pt]);
-            }
-            mesh.Clear();
-            this.has_hole = true;
-            hole_start_index = 4;
-            hole_end_index = 8;
-            mesh.vertices = new_verts.ToArray();
-            mesh.triangles = new_tris.ToArray();
-            
-            //Debug.Log ("First vertex " + mesh.vertices [0]);
-            
-            mesh = this.extrudeWall(mesh);
-            mesh.RecalculateNormals();
-        }
-        
-        //PUNEET -> ReAdded Meshcollider to wall in the case of hole
-        gameObject.AddMissingComponent<MeshCollider>().sharedMesh = mesh;
-        
-    }
+    
     public void addHoles(List<Hole> holes)
     {
         Mesh mesh = GetComponent<MeshFilter>().mesh;
@@ -226,7 +175,6 @@ public class WallFunctions : MonoBehaviour
                 latest_face.AddHole (Hole);
                 
                 holes [k].Hole_start_index = (k - 1) >= 0 ? holes [k - 1].Hole_end_index : 4;
-                this.has_hole = true;
                 //Debug.Log ("here");
                 hole_list.Add (holes [k]);
             }
@@ -248,6 +196,8 @@ public class WallFunctions : MonoBehaviour
         mesh.RecalculateNormals ();
         //PUNEET -> ReAdded Meshcollider to wall in the case of hole
         gameObject.AddMissingComponent<MeshCollider>().sharedMesh = mesh;
+
+		//change uvs according to hole
         
     }
     
@@ -386,9 +336,15 @@ public class WallFunctions : MonoBehaviour
         for (int i = 0; i < triangles.Length; i ++)
             Debug.Log (triangles[i]);*/
         
+
+
         //add to mesh and return
         mesh.vertices = vertices;
         mesh.triangles = triangles;
+
+		//assign UVs
+		assignUV();
+
         return mesh;
     }
     
@@ -398,7 +354,53 @@ public class WallFunctions : MonoBehaviour
         return triangles;
     }
     
-    
+	private void assignUV() {
+		Mesh m = GetComponent<MeshFilter> ().mesh;
+		Vector3[] verts = m.vertices;
+		int ovl = GetComponent<WallFunctions> ().Ovl;
+		Vector2[] uvs = new Vector2[verts.Length];
+
+		//faces ---- 0 to 2 * OVL
+		for (int i = 0; i < 2 * ovl; i++) {
+			uvs [i] = new Vector2 (verts [i].z / tilingfactor, verts [i].y / tilingfactor);		
+		}
+
+
+
+		//loop for hexes ---- 2 * OVL to hole start 
+
+		for (int i = 2 * ovl; i < (2 * ovl + 6 * 4); i+=6) {
+			//base points 
+			uvs[i] = new Vector2 (verts [i].z / tilingfactor, verts [i].y / tilingfactor);
+			uvs[i + 1] = new Vector2 (verts [i + 1].z / tilingfactor, verts [i + 1].y / tilingfactor);
+
+			//mid and end
+			if (verts [i].y == verts[i + 1].y)
+				for (int k = 2; k < 6; k++) 
+					uvs[i + k] = new Vector2 (verts [i + k].z / tilingfactor, (verts [i + k].y + verts [i + k].x - verts[i + k % 2].x) / tilingfactor);
+			else 
+				for (int k = 2; k < 6; k++) 
+					uvs[i + k] = new Vector2 ((verts [i + k].z + verts [i + k].x - verts[i + k % 2].x) / tilingfactor, verts [i + k].y / tilingfactor);
+		}
+
+		//Loop for holes --- hole start to end
+
+		for (int i = (2 * ovl + 6 * 4); i < verts.Length; i+=4) {
+			//base points 
+			uvs[i] = new Vector2 (verts [i].z / tilingfactor, verts [i].y / tilingfactor);
+			uvs[i + 1] = new Vector2 (verts [i + 1].z / tilingfactor, verts [i + 1].y / tilingfactor);
+
+			//mid and end
+			if (verts [i].y == verts[i + 1].y)
+				for (int k = 2; k < 4; k++) 
+					uvs[i + k] = new Vector2 (verts [i + k].z / tilingfactor, (verts [i + k].y + verts [i + k].x - verts[i + k % 2].x) / tilingfactor);
+			else 
+				for (int k = 2; k < 4; k++) 
+					uvs[i + k] = new Vector2 ((verts [i + k].z + verts [i + k].x - verts[i + k % 2].x) / tilingfactor, verts [i + k].y / tilingfactor);
+		}
+
+		m.uv = uvs;
+	}
     // Use this for initialization
     void Start()
     {
