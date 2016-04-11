@@ -166,6 +166,7 @@ public class ClickManager : MonoBehaviour {
         foreach (GameObject window in windowList)
         {
 			var windowObject = new HouseParseObject();
+			windowObject.Name = window.name;
 			windowObject.Rotation = window.transform.rotation.z;
 			windowObject.Xpos = window.transform.position.x;
 			windowObject.Ypos = window.transform.position.y;
@@ -179,6 +180,7 @@ public class ClickManager : MonoBehaviour {
         {
 
 			var houseParseObject = new HouseParseObject();
+			houseParseObject.Name =  houseObject.name;
 			houseParseObject.Rotation = houseObject.transform.rotation.z;
 			houseParseObject.Xpos = houseObject.transform.position.x;
 			houseParseObject.Ypos = houseObject.transform.position.y;
