@@ -58,7 +58,8 @@ public class WallGenerator : MonoBehaviour
         {
             addWindows(windowList);
         }
-
+		adjustWalls ();
+		generateFloor ();
         print("House object list size is : " + houseObjectList.Count);
     }
 
@@ -82,111 +83,117 @@ public class WallGenerator : MonoBehaviour
             
         }
         this.walls = walls;
-        //Debug.Log (-3 % walls.Length);
-        //adjust all walls
-        foreach (GameObject wall_object in walls)
-        {
-            nodeAddOrUpdate(wall_object.GetComponent<WallFunctions>().Start_pt, wall_object);
-            nodeAddOrUpdate(wall_object.GetComponent<WallFunctions>().End_pt, wall_object);
-        }
-        
-        List<GameObject>[] node_values = nodes.Values.ToArray();
-        Vector3[] node_points = nodes.Keys.ToArray();
-        //walls[2].GetComponent<WallFunctions>().addHole();
-        for (int i = 0; i < node_values.Count(); i++)
-        {
-            GameObject[] coincident_walls = node_values[i].ToArray();
-            for (int j = 0; j < coincident_walls.Length; j++)
-            {
-                Vector3 start = getStart(coincident_walls[j]);
-                Vector3 end = getEnd(coincident_walls[j]);
-                Vector3 otherPoint = start == node_points[i] ? end : start;
-                
-                float angle = Vector3.Angle(otherPoint - node_points[i], new Vector3(1, 0, 0));
-                Vector3 cross = Vector3.Cross(otherPoint - node_points[i], new Vector3(1, 0, 0));
-                if (cross.y < 0) angle = -angle;
-                
-                
-                coincident_walls[j].GetComponent<WallFunctions>().Angle = angle;
-            }
-            if (coincident_walls.Length < 3)
-                coincident_walls = coincident_walls.OrderBy(w => w.GetComponent<WallFunctions>().Angle).ToArray();
-            else
-                coincident_walls = coincident_walls.OrderByDescending(w => w.GetComponent<WallFunctions>().Angle).ToArray();
-            
-            alternator = false;
-            Debug.Log("Point : " + node_points[i]);
-            if (coincident_walls.Length > 1)
-            {
-                for (int j = 0; j < coincident_walls.Length; j++)
-                {
-                    Debug.Log(coincident_walls[j].name + " : " + coincident_walls[j].GetComponent<WallFunctions>().Angle + ", " + coincident_walls[(j + 1) % coincident_walls.Length].name + " : " + coincident_walls[(j + 1) % coincident_walls.Length].GetComponent<WallFunctions>().Angle);
-                    alternator = !alternator;
-                    adjustShape(coincident_walls[j], coincident_walls[(j + 1) % coincident_walls.Length], node_points[i]);
-                }
-            }
-        }
-        //Floor
-        if (point_pairs_array.Length > 2) {
-            List<Point> p = new List<Point> ();
-            for (int i = 0; i < node_points.Length; i++) {
-                Point s = new Point ();
-                s.X = node_points [i].x;
-                s.Y = node_points [i].z;
-                p.Add (s);
-            }
-            
-            Point[] ch = ConvexHull.CH2 (p).ToArray ();
-            Vector2[] floor_vertices = new Vector2[ch.Length - 1];
-            
-            for (int i = 0; i < ch.Length - 1; i++) {
-                floor_vertices [i] = new Vector2 (ch [i].X, ch [i].Y);
-                Debug.Log (floor_vertices [i]);
-            }
-            
-            GameObject floor = new GameObject ();
-            floor.name = "Floor";
-            floor.transform.parent = _3DContainer.transform;
-            floor.AddComponent<MeshFilter> ();
-            floor.AddComponent<MeshRenderer> ();
-            
-            Mesh floor_m = floor.GetComponent<MeshFilter> ().mesh;
-            
-            Polygon floor_poly = createPoly (floor_vertices);
-            P2T.Triangulate (floor_poly);
-            
-            for (int i = 0; i < floor_poly.Triangles.Count; i++)
-            for (int j = 0; j < 3; j++) {
-                TriangulationPoint tpt = floor_poly.Triangles [i].Points [j];
-                Vector3 pt = new Vector3 ((float)tpt.X, 0, (float)tpt.Y);
-                new_tris.Add (vertexIndices [pt]);
-            }
-            
-            floor_m.vertices = new_verts.ToArray ();
-            int[] tris = new_tris.ToArray ();
-            for (int i = 0; i < tris.Length; i += 3) {
-                int temp = tris [i + 1];
-                tris [i + 1] = tris [i + 2];
-                tris [i + 2] = temp;
-            }
-            floor_m.triangles = tris;
-            floor_m.RecalculateNormals ();
 
-            //assign material
-            /*Material newMat = new Material(Shader.Find("Standard"));
+        //Create a dictionary of all nodes and coincident walls 
+		//To be used for adjusting walls and floor generation
+		foreach (GameObject wall_object in walls)
+		{
+			nodeAddOrUpdate(wall_object.GetComponent<WallFunctions>().Start_pt, wall_object);
+			nodeAddOrUpdate(wall_object.GetComponent<WallFunctions>().End_pt, wall_object);
+		}
+        
+    }
+	private void adjustWalls() {
+		List<GameObject>[] node_values = nodes.Values.ToArray();
+		Vector3[] node_points = nodes.Keys.ToArray();
+		//walls[2].GetComponent<WallFunctions>().addHole();
+		for (int i = 0; i < node_values.Count(); i++)
+		{
+			GameObject[] coincident_walls = node_values[i].ToArray();
+			for (int j = 0; j < coincident_walls.Length; j++)
+			{
+				Vector3 start = getStart(coincident_walls[j]);
+				Vector3 end = getEnd(coincident_walls[j]);
+				Vector3 otherPoint = start == node_points[i] ? end : start;
+
+				float angle = Vector3.Angle(otherPoint - node_points[i], new Vector3(1, 0, 0));
+				Vector3 cross = Vector3.Cross(otherPoint - node_points[i], new Vector3(1, 0, 0));
+				if (cross.y < 0) angle = -angle;
+
+
+				coincident_walls[j].GetComponent<WallFunctions>().Angle = angle;
+			}
+			if (coincident_walls.Length < 3)
+				coincident_walls = coincident_walls.OrderBy(w => w.GetComponent<WallFunctions>().Angle).ToArray();
+			else
+				coincident_walls = coincident_walls.OrderByDescending(w => w.GetComponent<WallFunctions>().Angle).ToArray();
+
+			alternator = false;
+			Debug.Log("Point : " + node_points[i]);
+			if (coincident_walls.Length > 1)
+			{
+				for (int j = 0; j < coincident_walls.Length; j++)
+				{
+					Debug.Log(coincident_walls[j].name + " : " + coincident_walls[j].GetComponent<WallFunctions>().Angle + ", " + coincident_walls[(j + 1) % coincident_walls.Length].name + " : " + coincident_walls[(j + 1) % coincident_walls.Length].GetComponent<WallFunctions>().Angle);
+					alternator = !alternator;
+					adjustShape(coincident_walls[j], coincident_walls[(j + 1) % coincident_walls.Length], node_points[i]);
+				}
+			}
+		}
+	}
+	private void generateFloor() {
+		Vector3[] node_points = nodes.Keys.ToArray();
+		if (point_pairs_array.Length > 2) {
+			List<Point> p = new List<Point> ();
+			for (int i = 0; i < node_points.Length; i++) {
+				Point s = new Point ();
+				s.X = node_points [i].x;
+				s.Y = node_points [i].z;
+				p.Add (s);
+			}
+
+			Point[] ch = ConvexHull.CH2 (p).ToArray ();
+			Vector2[] floor_vertices = new Vector2[ch.Length - 1];
+
+			for (int i = 0; i < ch.Length - 1; i++) {
+				floor_vertices [i] = new Vector2 (ch [i].X, ch [i].Y);
+				Debug.Log (floor_vertices [i]);
+			}
+
+			GameObject floor = new GameObject ();
+			floor.name = "Floor";
+			floor.transform.parent = _3DContainer.transform;
+			floor.AddComponent<MeshFilter> ();
+			floor.AddComponent<MeshRenderer> ();
+
+			Mesh floor_m = floor.GetComponent<MeshFilter> ().mesh;
+
+			Polygon floor_poly = createPoly (floor_vertices);
+			P2T.Triangulate (floor_poly);
+
+			for (int i = 0; i < floor_poly.Triangles.Count; i++)
+				for (int j = 0; j < 3; j++) {
+					TriangulationPoint tpt = floor_poly.Triangles [i].Points [j];
+					Vector3 pt = new Vector3 ((float)tpt.X, 0, (float)tpt.Y);
+					new_tris.Add (vertexIndices [pt]);
+				}
+
+			floor_m.vertices = new_verts.ToArray ();
+			int[] tris = new_tris.ToArray ();
+			for (int i = 0; i < tris.Length; i += 3) {
+				int temp = tris [i + 1];
+				tris [i + 1] = tris [i + 2];
+				tris [i + 2] = temp;
+			}
+			floor_m.triangles = tris;
+			floor_m.RecalculateNormals ();
+
+			//assign material
+			/*Material newMat = new Material(Shader.Find("Standard"));
             //Resources.Load("meshgen material", typeof(Material)) as Material;
             MeshRenderer renderer = floor.GetComponent<MeshRenderer>();
             renderer.sharedMaterial = newMat;*/
-            Material newMat = new Material(Shader.Find("Standard"));//GetDefaultMaterial();
-            newMat.color = Color.gray;
-            floor.GetComponent<MeshRenderer>().material = newMat;
-            
-            //PUNEET -> Added Mesh Collider to floor
-            floor.AddComponent<MeshCollider> ();
-            floor.GetComponent<MeshCollider> ().sharedMesh = floor_m;
-            floor.layer = 10;
-        }
-    }
+			Material newMat = new Material(Shader.Find("Standard"));//GetDefaultMaterial();
+			newMat.color = Color.gray;
+			//newMat.mainTexture.wrapMode = TextureWrapMode.Repeat;
+			floor.GetComponent<MeshRenderer>().material = newMat;
+
+			//PUNEET -> Added Mesh Collider to floor
+			floor.AddComponent<MeshCollider> ();
+			floor.GetComponent<MeshCollider> ().sharedMesh = floor_m;
+			floor.layer = 10;
+		}
+	}
     private Polygon createPoly(Vector2[] points)
     {
         List<PolygonPoint> polyPoints = new List<PolygonPoint>();
@@ -275,23 +282,15 @@ public class WallGenerator : MonoBehaviour
         print ("Wall holes dictionairy is size" + wall_holes.Count);
         if (wall_holes.ContainsKey(wall))
         {
-            print ("WALL HOLE CONTAINS KEY");
             List<Hole> l = wall_holes[wall];
             l.Add(hole);
             wall_holes[wall] = l;
         }
         else
         {
-            print ("WALL HOLE DOESNT CONTAINS KEY 1 ");
             List<Hole> l = new List<Hole>();
-            print ("WALL HOLE CONTAINS KEY 2");
-            
             l.Add(hole);
-            print ("WALL HOLE CONTAINS KEY 3");
-            
             wall_holes.Add(wall, l);
-            print ("WALL HOLE CONTAINS KEY 4");
-            
         }
     }
 
