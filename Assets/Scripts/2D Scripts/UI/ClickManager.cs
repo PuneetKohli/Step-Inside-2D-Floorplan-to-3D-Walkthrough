@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Linq;
+using System.Collections.Generic;
 
 public class ClickManager : MonoBehaviour {
 
@@ -53,10 +54,14 @@ public class ClickManager : MonoBehaviour {
 
     public void clicked3DView()
     {
+        List<GameObject> nodeList = wallManager.exportNodes();
+        List<GameObject> windowList = wallManager.exportWindows();
+        List<GameObject> objectList = wallManager.exportObjects();
+        saveToParse(nodeList, windowList, objectList);
         print("3d view!");
         _3DRoot.SetActive(true);
         print("Wall generator is" + wallGenerator + " Wall manager is " + wallManager);
-        wallGenerator.generate3D(wallManager.exportNodes(), wallManager.exportWindows(), wallManager.exportObjects());
+        wallGenerator.generate3D(nodeList, windowList, objectList);
         _2DRoot.SetActive(false);
         EnableIsoCam();
         SwapUIMode();
@@ -118,5 +123,38 @@ public class ClickManager : MonoBehaviour {
     {        
         player.SetActive(true);
         isoCam.SetActive(false);
+    }
+
+    void saveToParse(List<GameObject> nodeList, List<GameObject> windowList, List<GameObject> objectList)
+    {
+        //For saving to the "Node" object in parse, directly save nodeList
+        foreach (GameObject node in nodeList)
+        {
+            //node.transform.position.x //<---xpos
+            //node.transform.position.y //<---ypos
+            foreach(GameObject adjacentNode in node.GetComponent<Node>().adjacentNodes) //<--- for NodeConnection
+            {
+                //start_node = node
+                //end_node = adjacentNode
+            }
+        }
+
+        foreach (GameObject window in windowList)
+        {
+            //is_attached = true
+            //window.transform.position,x <--- xpos
+            //window.transform.position.y <--- ypos
+            //window.GetComponent<HouseObject>().category <-- category
+            //window.transform.rotation.z <-- rotation
+        }
+
+        foreach (GameObject houseObject in objectList)
+        {
+            //is_attached = false
+            //houseObject.transform.position,x <--- xpos
+            //houseObject.transform.position.y <--- ypos
+            //houseObject.GetComponent<HouseObject>().category <-- category
+            //houseObject.transform.rotation.z <-- rotation
+        }
     }
 }
