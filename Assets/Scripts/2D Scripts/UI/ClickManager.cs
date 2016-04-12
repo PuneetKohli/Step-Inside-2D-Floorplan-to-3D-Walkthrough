@@ -25,9 +25,22 @@ public class ClickManager : MonoBehaviour {
     GameObject mainMenuScrollView, submenu;
     WallGenerator wallGenerator;
 
+    public GameObject planIdLabel;
+
+    string planObjectID = null;
 
     // Use this for initialization
     void Awake () {
+        ParseObject.RegisterSubclass<NodeParseObject>();
+        ParseObject.RegisterSubclass<HouseParseObject>();
+        ParseObject.RegisterSubclass<NodeConnection>();
+        ParseObject.RegisterSubclass<Plan>();
+        Plan newPlan = new Plan(); 
+        newPlan.SaveAsync().ContinueWith( t => {
+            planObjectID = newPlan.ObjectId;
+            didGetObjectID = true;
+            print ("Object id of plan is " + planObjectID);
+        });
 
         _3DRoot = GameObject.Find("3D Root");
         wallGenerator = _3DRoot.GetComponent<WallGenerator>();
@@ -53,14 +66,29 @@ public class ClickManager : MonoBehaviour {
 
         _3DUIRoot.gameObject.SetActive(false);
 
+
+    }
+
+    bool didGetObjectID = false;
+    bool didSetLabel = false;
+    void Update()
+    {
+        if (didGetObjectID && !didSetLabel)
+        {
+            didSetLabel = true;
+            UILabel planLabel = planIdLabel.GetComponent<UILabel>();            
+            planLabel.text = planObjectID;
+        }
     }
 
     public void clicked3DView()
     {
+        UILabel planLabel = planIdLabel.GetComponent<UILabel>();            
+        planLabel.text = planObjectID;
         List<GameObject> nodeList = wallManager.exportNodes();
         List<GameObject> windowList = wallManager.exportWindows();
         List<GameObject> objectList = wallManager.exportObjects();
-        StartCoroutine(saveToParse(nodeList, windowList, objectList,  null));
+        StartCoroutine(saveToParse(nodeList, windowList, objectList, Plan.CreateWithoutData<Plan>(planObjectID)));
         print("3d view!");
         _3DRoot.SetActive(true);
         print("Wall generator is" + wallGenerator + " Wall manager is " + wallManager);
@@ -81,6 +109,12 @@ public class ClickManager : MonoBehaviour {
 
     public void ClickedSave()
     {
+        List<GameObject> nodeList = wallManager.exportNodes();
+        List<GameObject> windowList = wallManager.exportWindows();
+        List<GameObject> objectList = wallManager.exportObjects();
+        StartCoroutine(saveToParse(nodeList, windowList, objectList, Plan.CreateWithoutData<Plan>(planObjectID)));
+        UILabel planLabel = planIdLabel.GetComponent<UILabel>();            
+        planLabel.text = planObjectID;
         wallManager.exportWindows();
     }
     public void ClickedMainMenuItem(string itemName)
@@ -243,9 +277,15 @@ public class ClickManager : MonoBehaviour {
                         var nodeConnection = new NodeConnection();
                         nodeConnection.StartNode = curNodes [i];
                         nodeConnection.EndNode = tempnode;
-                        nodeConnection.PlanId = null;
-                        nodeConnection.SaveAsync();
-                        break;
+                        nodeConnection.PlanId = currentPlan;
+                        var connectSaveTask = nodeConnection.SaveAsync().ContinueWith( t=> {
+                            print("NODE CONNECTION SAVED TO PARSE" + t.Exception.Message);
+                        });
+                        while (!connectSaveTask.IsCompleted)
+                        {
+                            yield return null;
+                        }
+                        print("saved node connection");
                     }
                 }
             }

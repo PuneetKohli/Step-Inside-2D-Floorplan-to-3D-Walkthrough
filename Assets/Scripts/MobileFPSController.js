@@ -18,6 +18,9 @@ function Start ()
     thisTransform = GetComponent(Transform);
     character = GetComponent(CharacterController);
     originalRotation = transform.rotation.eulerAngles.y;
+    //moveOutline = new GameObject();
+    movePad = new GameObject();
+    moveOutline = new GameObject();
     movePad.transform.position = new Vector2(-1,-1);
     moveOutline.transform.position = new Vector2(-1,-1);
     jump = false;
@@ -31,11 +34,7 @@ function Update ()
     {
         if (touch.phase == TouchPhase.Began)
         {
-            if (jumpButton.HitTest(touch.position))
-            {
-                jump = true;
-            }
-            else if (touch.position.x < Screen.width / 2)
+			 if (touch.position.x < Screen.width / 2)
             {
                 leftFingerID = touch.fingerId;
                 leftFingerCenter = touch.position;
@@ -92,9 +91,9 @@ function Update ()
         }
     }
    
-    rotationX += rightFingerInput.x * 25;
-    rotationY += rightFingerInput.y * 25;
-    rotationY = Mathf.Clamp(rotationY, minimumY, maximumY);
+    rotationX += rightFingerInput.x * 40;
+    //rotationY += rightFingerInput.y * 25;
+    //rotationY = Mathf.Clamp(rotationY, minimumY, maximumY);
     transform.rotation =  Quaternion.Slerp (transform.rotation, Quaternion.Euler(0, originalRotation + rotationX, 0),  0.1);
     cameraPivot.localRotation =  Quaternion.Slerp (cameraPivot.localRotation, Quaternion.Euler(cameraPivot.localRotation.x-rotationY, 0, 0),  0.1);
    
@@ -140,9 +139,9 @@ var moveStickDiff = 100;
 var leftFingerInput : Vector2;
 var rightFingerInput : Vector2;
  
-var moveOutline : GUITexture;
-var movePad : GUITexture;
-var jumpButton : GUITexture;
+public var moveOutline : GameObject;
+public var movePad : GameObject;
+public var jumpButton : GameObject;
  
 var rotationX : float;
 var rotationY : float;

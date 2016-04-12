@@ -21,4 +21,5 @@ public class FlyThrough : MonoBehaviour {
         transform.position += transform.forward*moveSpeed*Input.GetAxis("Vertical");
         transform.position += transform.right*moveSpeed*Input.GetAxis("Horizontal");
     }
+       
 }

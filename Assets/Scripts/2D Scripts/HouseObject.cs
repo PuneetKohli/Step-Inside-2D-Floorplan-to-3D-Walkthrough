@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using UnityEngine.SceneManagement;
 
 public class HouseObject : MonoBehaviour {
 
@@ -13,13 +14,21 @@ public class HouseObject : MonoBehaviour {
 
     void OnEnable()
     {
-        background = transform.GetChild(0);
+        if (transform.childCount > 0)
+        {
+            background = transform.GetChild(0);
+        }
     }
 
     // Use this for initialization
     protected virtual void Start () {
-        wallManager = GameObject.Find("2DManager").GetComponent<WallManager>();
-        print("Wall manager is " + wallManager);
+        if (SceneManager.GetActiveScene().name.Equals("PC"))
+        {
+            wallManager = GameObject.Find("2DManager").GetComponent<WallManager>();
+        } else
+        {
+            wallManager = null;
+        }
 	}
 	
 	// Update is called once per frame

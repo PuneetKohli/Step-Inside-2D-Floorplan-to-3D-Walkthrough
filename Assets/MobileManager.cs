@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using Parse;
+using UnityEngine.SceneManagement;
 
 public class MobileManager : MonoBehaviour {
 
@@ -28,8 +29,8 @@ public class MobileManager : MonoBehaviour {
     bool didLoadAll = false;
 
     List<NodeConnection> connectionList = new List<NodeConnection>();
-    List<HouseParseObject> houseObjectList = new List<HouseParseObject>(); 
-    List<HouseParseObject> windowList = new List<HouseParseObject>(); 
+    List<GameObject> houseObjectList = new List<GameObject>(); 
+    List<GameObject> windowList = new List<GameObject>(); 
     List<NodeParseObject> nodeList = new List<NodeParseObject>();
 
     // Use this for initialization
@@ -55,7 +56,7 @@ public class MobileManager : MonoBehaviour {
 
     public void Start()
     {
-        retrieve3DFromParse("xyz");
+        StartCoroutine(retrieve3DFromParse(PlayerPrefs.GetString("PlanID", "TLrgYc8Wro")));
     }
 
     bool didGenerate = false;
@@ -68,22 +69,22 @@ public class MobileManager : MonoBehaviour {
         }    
     }
 
-    public void clicked3DView()
+    public void ClickedWalkthrough(GameObject g)
     {
-        List<GameObject> nodeList = wallManager.exportNodes();
-        List<GameObject> windowList = wallManager.exportWindows();
-        List<GameObject> objectList = wallManager.exportObjects();
-        StartCoroutine(saveToParse(nodeList, windowList, objectList,  null));
-        print("3d view!");
-        _3DRoot.SetActive(true);
-        print("Wall generator is" + wallGenerator + " Wall manager is " + wallManager);
-        wallGenerator.generate3D(nodeList, windowList, objectList);
-        EnableIsoCam();
+        if (g.GetComponent<UILabel>().text.Equals("Walkthrough"))
+        {
+            g.GetComponent<UILabel>().text = "Top View";
+            EnablePlayerCam();
+        } else
+        {
+            g.GetComponent<UILabel>().text = "Walkthrough";
+            EnableIsoCam();
+        }
     }
 
-    public void ClickedWalkthrough()
+    public void ClickedBack()
     {
-        EnablePlayerCam();
+        SceneManager.LoadScene(0);
     }
 
     void EnableIsoCam()
@@ -98,35 +99,38 @@ public class MobileManager : MonoBehaviour {
         isoCam.SetActive(false);
     }
 
-    void retrieve3DFromParse(string planID)  //Input is objectID
+    IEnumerator retrieve3DFromParse(string planID)  //Input is objectID
     {
+
+        print("Plan ID is " + planID);
         Plan currentPlan = ParseObject.CreateWithoutData<Plan>(planID);
 
-        var query = new ParseQuery<NodeParseObject>();
-        //query = query.WhereDoesNotExist("plan_id");
-        query.FindAsync().ContinueWith(t =>
+        var connectionQuery = new ParseQuery<NodeConnection>();
+        //connectionQuery = connectionQuery.WhereDoesNotExist("plan_id");
+        connectionQuery = connectionQuery.Include("start_node");
+        connectionQuery = connectionQuery.Include("end_node");
+        connectionQuery = connectionQuery.WhereEqualTo("plan_id", currentPlan);
+        var connectionQueryTask = connectionQuery.FindAsync();
+        while (!connectionQueryTask.IsCompleted)
         {
-            IEnumerable<NodeParseObject> nodes = t.Result;
-            saveNodes(nodes);
-            var connectionQuery = new ParseQuery<NodeConnection>();
-            //connectionQuery = connectionQuery.WhereDoesNotExist("plan_id");
-            connectionQuery = connectionQuery.Include("start_node");
-            connectionQuery = connectionQuery.Include("end_node");
-            connectionQuery.FindAsync().ContinueWith(t2 =>
-            {
-                IEnumerable<NodeConnection> nodeConnections = t2.Result;
-                saveConnections(nodeConnections);
+            yield return null;
+        }
 
-                var houseobjectQuery = new ParseQuery<HouseParseObject>();
-                //connectionQuery = connectionQuery.WhereDoesNotExist("plan_id");
-                houseobjectQuery.FindAsync().ContinueWith(t3 =>
-                {
-                    IEnumerable<HouseParseObject> houseObjects = t3.Result;
-                    saveHouseObjects(houseObjects);
-                });
+        IEnumerable<NodeConnection> nodeConnections = connectionQueryTask.Result;
+        saveConnections(nodeConnections);
 
-            });
-        });
+        var houseobjectQuery = new ParseQuery<HouseParseObject>();
+        houseobjectQuery = houseobjectQuery.WhereEqualTo("plan_id", currentPlan);
+        //connectionQuery = connectionQuery.WhereDoesNotExist("plan_id");
+        var houseQueryTask = houseobjectQuery.FindAsync();
+
+        while (!houseQueryTask.IsCompleted)
+        {
+            yield return null;
+        }
+
+        IEnumerable<HouseParseObject> houseObjects = houseQueryTask.Result;
+        saveHouseObjects(houseObjects);  
    }
         
     void saveNodes(IEnumerable<NodeParseObject> nodes)
@@ -157,11 +161,20 @@ public class MobileManager : MonoBehaviour {
             if (houseObject.Isattached)
             {
                 print("Added window to local");
-                windowList.Add(houseObject);
+                GameObject g = new GameObject();
+                g.AddMissingComponent<WallAttachableObject>();
+                g.GetComponent<WallAttachableObject>().length = houseObject.Length;
+                g.GetComponent<WallAttachableObject>().height = houseObject.Height;
+                g.GetComponent<WallAttachableObject>().elevation = houseObject.Elevation;
+                g.transform.position = new Vector3(houseObject.Xpos, houseObject.Ypos, 0f);
+                windowList.Add(g);
             } else
             { 
                 print("Added house object to local " + houseObject.Xpos);
-                houseObjectList.Add(houseObject);
+                GameObject g = new GameObject();
+                g.AddMissingComponent<PlacableHouseObject>();
+                g.transform.position = new Vector3(houseObject.Xpos, houseObject.Ypos, 0f);
+                houseObjectList.Add(g);
             }
         }
         didLoadAll = true;
