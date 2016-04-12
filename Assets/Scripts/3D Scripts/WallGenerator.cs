@@ -20,6 +20,7 @@ public class WallGenerator : MonoBehaviour
     private Dictionary<GameObject, List<Hole>> wall_holes = new Dictionary<GameObject, List<Hole>>();
     public LayerMask layerMask3D;
     public GameObject _3DContainer;
+	private float floortiling = 0.1f;
 
     public void Refresh()
     {
@@ -33,6 +34,16 @@ public class WallGenerator : MonoBehaviour
         wall_holes.Clear();
     }
 
+    Vector3[][] initPointPairsFromConnection(List<NodeConnection> nodeConnection)
+    {
+        List<Vector3[]> point_pairs = new List<Vector3[]>();
+        for (int i = 0; i < nodeConnection.Count; i++)
+        {
+            point_pairs.Add(new Vector3[] { new Vector3(nodeConnection[i].StartNode.Xpos, 1f, nodeConnection[i].StartNode.Ypos), new Vector3(nodeConnection[i].EndNode.Xpos, 1f, nodeConnection[i].EndNode.Ypos) });
+        }
+        return point_pairs.ToArray();
+    }
+        
     Vector3[][] initPointPairsFromNodes(List<GameObject> nodeList)
     {
         List<Vector3[]> point_pairs = new List<Vector3[]>();
@@ -47,6 +58,19 @@ public class WallGenerator : MonoBehaviour
             }
         }
         return point_pairs.ToArray();
+    }
+
+    public void generate3DFromParse(List<NodeConnection> connectionList, List<HouseParseObject> houseObjectList, List<HouseParseObject> windowList)
+    {
+        print("Generated 3d from parse");
+        point_pairs_array = initPointPairsFromConnection(connectionList);
+        generateWalls();
+
+        if(windowList.Count > 0)
+        {
+            addWindowsFromParse(windowList);
+        }
+
     }
 
     public void generate3D(List<GameObject> nodeList, List<GameObject> windowList, List<GameObject> houseObjectList)
@@ -172,8 +196,8 @@ public class WallGenerator : MonoBehaviour
 					Vector3 pt = new Vector3 ((float)tpt.X, 0, (float)tpt.Y);
 					new_tris.Add (vertexIndices [pt]);
 				}
-
-			floor_m.vertices = new_verts.ToArray ();
+			Vector3[] verts = new_verts.ToArray ();
+			floor_m.vertices = verts;
 			int[] tris = new_tris.ToArray ();
 			for (int i = 0; i < tris.Length; i += 3) {
 				int temp = tris [i + 1];
@@ -188,8 +212,25 @@ public class WallGenerator : MonoBehaviour
             //Resources.Load("meshgen material", typeof(Material)) as Material;
             MeshRenderer renderer = floor.GetComponent<MeshRenderer>();
             renderer.sharedMaterial = newMat;*/
+
+			//assign uvs
+			Vector2[] uvs = new Vector2[verts.Length];
+			for (int i = 0; i < verts.Length; i++) {
+				uvs [i] = new Vector2 (verts[i].x * floortiling, verts[i].z * floortiling);
+			}
+			floor_m.uv = uvs;
+
+
 			Material newMat = new Material(Shader.Find("Standard"));//GetDefaultMaterial();
-			newMat.color = Color.gray;
+			newMat.color = Color.white;
+			Texture2D bump = (Texture2D) Resources.Load ("textures/rovere-normal");
+			Texture2D diffuse = (Texture2D) Resources.Load ("textures/rovere-diffuse");
+			newMat.mainTexture = diffuse;
+			newMat.SetTexture ("_BumpMap", bump );
+			newMat.mainTexture.wrapMode = TextureWrapMode.Repeat;
+			MeshRenderer renderer = floor.GetComponent<MeshRenderer>();
+			renderer.material = newMat;
+
 			//newMat.mainTexture.wrapMode = TextureWrapMode.Repeat;
 			floor.GetComponent<MeshRenderer>().material = newMat;
 
@@ -256,6 +297,37 @@ public class WallGenerator : MonoBehaviour
             }
         }  
     }
+
+    public void addWindowsFromParse(List<HouseParseObject> windows)
+    {
+       foreach (HouseParseObject window in windows) {
+
+            Hole h = new Hole ();
+            h.Position = new Vector3(window.Xpos, window.Ypos, 0f);
+            h.Hole_length = window.Length;
+            h.Hole_height = window.Height;
+            h.Hole_elevation = window.Elevation;
+            //Vector3 startNode = swapVectorYZ(window.GetComponent<WallAttachableObject>().startNode.transform.position);
+            //Vector3 endNode = swapVectorYZ(window.GetComponent<WallAttachableObject>().endNode.transform.position);
+            GameObject w = liesOn(h);
+            h.Position = swapVectorYZ(h.Position);
+
+            if (w != null) {
+                holeAddOrUpdate (w, h);
+            }
+            else 
+                Debug.Log("Not Found");
+        }
+        if (wall_holes.Count > 0) {
+            foreach (KeyValuePair<GameObject, List<Hole>> entry in wall_holes) {
+                Debug.Log ("Sent holes : " + entry.Value.Count );
+                print("Entry key is " + entry.Key.name);
+                print("Count is : " + wall_holes.Count);
+                entry.Key.GetComponent<WallFunctions> ().addHoles (entry.Value);
+            }
+        } 
+    }
+
     private bool contains(Vector3[] array, Vector3 vect)
     {
         for (int i = 0; i < array.Length; i++)
@@ -263,6 +335,7 @@ public class WallGenerator : MonoBehaviour
                 return true;
         return false;
     }
+
     private GameObject liesOn (Hole h) {
         Vector3 relativePos = new Vector3(h.Position.x, 2.5f, h.Position.y);
         //RaycastHit[] hitList = Physics.BoxCastAll (relativePos, new Vector3 (h.Hole_length / 2, h.Hole_height / 2, thickness), Vector3.down, layerMask3D);
@@ -302,12 +375,14 @@ public class WallGenerator : MonoBehaviour
         print ("Wall holes dictionairy is size" + wall_holes.Count);
         if (wall_holes.ContainsKey(wall))
         {
+            print("Contains key");
             List<Hole> l = wall_holes[wall];
             l.Add(hole);
             wall_holes[wall] = l;
         }
         else
         {
+            print("Doesnt contain key");
             List<Hole> l = new List<Hole>();
             l.Add(hole);
             wall_holes.Add(wall, l);

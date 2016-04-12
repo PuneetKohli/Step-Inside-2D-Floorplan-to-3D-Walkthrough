@@ -119,7 +119,10 @@ public class WallFunctions : MonoBehaviour
         newMat.color = Color.white;
 
 		//apply texture
-		newMat.mainTexture = (Texture2D) Resources.Load ("textures/tex1");
+		Texture2D bump = (Texture2D) Resources.Load ("textures/plaster1-normal");
+		Texture2D diffuse = (Texture2D) Resources.Load ("textures/plaster1-diffuse");
+		newMat.mainTexture = diffuse;
+		newMat.SetTexture ("_BumpMap", bump );
 		newMat.mainTexture.wrapMode = TextureWrapMode.Repeat;
 
         //Resources.Load("meshgen material", typeof(Material)) as Material;
@@ -139,6 +142,7 @@ public class WallFunctions : MonoBehaviour
     
     public void addHoles(List<Hole> holes)
     {
+        print("Add holes");
         Mesh mesh = GetComponent<MeshFilter>().mesh;
         List<Vector2> rectanglePoints = new List<Vector2> ();
         rectanglePoints.Add (new Vector2 (0, 0));
@@ -149,8 +153,10 @@ public class WallFunctions : MonoBehaviour
         
         for (int l = 0; l < holes.Count; l++)
             Debug.Log (holes[l].Position);
-        
+
+        print("about to create hole");
         for (int k = 0; k < holes.Count; k++) {
+            print("Creating hole");
             float distance = (holes[k].Position - this.Start_pt).magnitude;
             hole_length = holes [k].Hole_length;
             hole_height = holes [k].Hole_height;
@@ -169,8 +175,8 @@ public class WallFunctions : MonoBehaviour
                 
                 
                 Polygon Hole = createPoly (holePoints.ToArray ());
+                print("Hole is " + Hole);
                 Debug.Log ("Created hole");
-                
                 
                 latest_face.AddHole (Hole);
                 
@@ -204,8 +210,10 @@ public class WallFunctions : MonoBehaviour
     private Polygon createPoly(Vector2[] points)
     {
         List<PolygonPoint> polyPoints = new List<PolygonPoint>();
+        print("Creating poly with n = " + points.Length);
         for (int i = 0; i < points.Length; i++)
-        {
+        {   print("bug here");
+
             polyPoints.Add(new PolygonPoint(points[i].x, points[i].y));
             Vector3 pt = new Vector3(-thickness / 2, points[i].y, points[i].x);
             new_verts.Add(pt);
@@ -213,6 +221,7 @@ public class WallFunctions : MonoBehaviour
             new_vert_count++;
         }
         Polygon P = new Polygon(polyPoints);
+        print("Returning poly");
         return P;
     }
     

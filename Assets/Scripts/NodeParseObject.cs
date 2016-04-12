@@ -5,17 +5,17 @@ using Parse;
 public class NodeParseObject : ParseObject
 {
     [ParseFieldName("xpos")]
-    public double Xpos
+    public float Xpos
     {
-        get { return GetProperty<double>("Xpos"); }
-        set { SetProperty<double>(value, "Xpos"); }
+        get { return GetProperty<float>("Xpos"); }
+        set { SetProperty<float>(value, "Xpos"); }
     }
 
     [ParseFieldName("ypos")]
-    public double Ypos
+    public float Ypos
     {
-        get { return GetProperty<double>("Ypos"); }
-        set { SetProperty<double>(value, "Ypos"); }
+        get { return GetProperty<float>("Ypos"); }
+        set { SetProperty<float>(value, "Ypos"); }
     }
 
     [ParseFieldName("plan_id")]

@@ -2,9 +2,10 @@
 using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using Parse;
 
-public class ClickManager : MonoBehaviour {
+public class MobileManager : MonoBehaviour {
 
     private string[] itemNames; 
     [HideInInspector]
@@ -24,22 +25,22 @@ public class ClickManager : MonoBehaviour {
     GameObject player, isoCam;
     GameObject mainMenuScrollView, submenu;
     WallGenerator wallGenerator;
+    bool didLoadAll = false;
 
+    List<NodeConnection> connectionList = new List<NodeConnection>();
+    List<HouseParseObject> houseObjectList = new List<HouseParseObject>(); 
+    List<HouseParseObject> windowList = new List<HouseParseObject>(); 
+    List<NodeParseObject> nodeList = new List<NodeParseObject>();
 
     // Use this for initialization
     void Awake () {
+
+        didLoadAll = false;
 
         _3DRoot = GameObject.Find("3D Root");
         wallGenerator = _3DRoot.GetComponent<WallGenerator>();
         isoCam = _3DRoot.transform.Find("Isocam").gameObject as GameObject;
         player = _3DRoot.transform.Find("Player").gameObject as GameObject;
-        _3DRoot.SetActive(false);
-        _2DRoot = GameObject.Find("2D Root");
-        wallManager = GameObject.Find("2DManager").GetComponent<WallManager>();
-        //_2DRoot = GameObject.Find("2D Root");
-        //_3DRoot = GameObject.Find("3D Root");
-        mainMenuScrollView = GameObject.Find("Main Menu Scroll View");
-        submenu = GameObject.Find("Sub Menu");
 
         itemNames = new string[] { "windows & door", "table", "bed", "chair"};
         windowsanddoorNames = new string[]{ "door1", "door2", "window1", "window2"};
@@ -49,10 +50,22 @@ public class ClickManager : MonoBehaviour {
         chairNames = new string[] { "red", "wooden", "round"};
 
         _3DUIRoot = transform.Find("3D UI Root");
-        _2DUIRoot = transform.Find("2D UI Root");
 
-        _3DUIRoot.gameObject.SetActive(false);
+    }
 
+    public void Start()
+    {
+        retrieve3DFromParse("xyz");
+    }
+
+    bool didGenerate = false;
+    public void Update()
+    {
+        if (didLoadAll && !didGenerate)
+        {
+            didGenerate = true;
+            wallGenerator.generate3DFromParse(connectionList, houseObjectList, windowList);
+        }    
     }
 
     public void clicked3DView()
@@ -65,55 +78,12 @@ public class ClickManager : MonoBehaviour {
         _3DRoot.SetActive(true);
         print("Wall generator is" + wallGenerator + " Wall manager is " + wallManager);
         wallGenerator.generate3D(nodeList, windowList, objectList);
-        _2DRoot.SetActive(false);
         EnableIsoCam();
-        SwapUIMode();
-    }
-
-    public void clicked2DView()
-    {
-        _3DRoot.transform.Find("3DContainer").DestroyChildren();
-        wallGenerator.Refresh();
-        _3DRoot.SetActive(false);
-        _2DRoot.SetActive(true);
-        SwapUIMode();
-    }
-
-    public void ClickedSave()
-    {
-        wallManager.exportWindows();
-    }
-    public void ClickedMainMenuItem(string itemName)
-    {
-        int index = IndexOfItem(itemName);
-        submenu.GetComponent<SubmenuManager>().ReloadSubmenu(index);
-    }
-
-    public void ClickedClear()
-    {
-        wallManager.Refresh();
     }
 
     public void ClickedWalkthrough()
     {
         EnablePlayerCam();
-    }
-    public int IndexOfItem(string itemName)
-    {
-        return itemNames.ToList().IndexOf(itemName);
-    }
-
-    public string[] getItemNames()
-    {
-        return itemNames;
-    }
-
-    void SwapUIMode()
-    {
-        bool swapTo2D = !_2DUIRoot.gameObject.activeInHierarchy;
-
-        _2DUIRoot.gameObject.SetActive(swapTo2D);
-        _3DUIRoot.gameObject.SetActive(!swapTo2D);
     }
 
     void EnableIsoCam()
@@ -128,78 +98,79 @@ public class ClickManager : MonoBehaviour {
         isoCam.SetActive(false);
     }
 
-    /*void saveToParse(List<GameObject> nodeList, List<GameObject> windowList, List<GameObject> objectList, Plan currentPlan)
+    void retrieve3DFromParse(string planID)  //Input is objectID
     {
-        List<NodeParseObject> curNodes = new List<NodeParseObject>(); 
+        Plan currentPlan = ParseObject.CreateWithoutData<Plan>(planID);
 
-        foreach (GameObject node in nodeList) {
-
-            var curNode = new NodeParseObject
-            { 
-                Xpos = node.transform.position.x,
-                Ypos = node.transform.position.y,
-                PlanId = currentPlan
-            };
-
-            curNodes.Add(curNode);
-        }
-
-        List<Node> nodeComponentList = new List<Node>();
-        for (int i = 0; i < nodeList.Count; i++)
+        var query = new ParseQuery<NodeParseObject>();
+        //query = query.WhereDoesNotExist("plan_id");
+        query.FindAsync().ContinueWith(t =>
         {
-            nodeComponentList.Add(nodeList[i].GetComponent<Node>());
-        }
-
-        ParseObject.SaveAllAsync(curNodes).ContinueWith(t =>
-        {
-            print("Entered save all");    
-            for(int i = 0; i < nodeList.Count; i++)
+            IEnumerable<NodeParseObject> nodes = t.Result;
+            saveNodes(nodes);
+            var connectionQuery = new ParseQuery<NodeConnection>();
+            //connectionQuery = connectionQuery.WhereDoesNotExist("plan_id");
+            connectionQuery = connectionQuery.Include("start_node");
+            connectionQuery = connectionQuery.Include("end_node");
+            connectionQuery.FindAsync().ContinueWith(t2 =>
             {
-                foreach(GameObject adjacentNode in nodeComponentList[i].adjacentNodes) //<--- for NodeConnection
+                IEnumerable<NodeConnection> nodeConnections = t2.Result;
+                saveConnections(nodeConnections);
+
+                var houseobjectQuery = new ParseQuery<HouseParseObject>();
+                //connectionQuery = connectionQuery.WhereDoesNotExist("plan_id");
+                houseobjectQuery.FindAsync().ContinueWith(t3 =>
                 {
-                    print("Entered its adjacent nodes");
-                    foreach (NodeParseObject tempnode in curNodes) {
-                        print("Checking cur node tempnodes");
-                        if(adjacentNode.transform.position.x == tempnode.Xpos && adjacentNode.transform.position.y == tempnode.Ypos) {
-                            var nodeConnection = new NodeConnection();
-                            nodeConnection.StartNode = curNodes[i];
-                            nodeConnection.EndNode = tempnode;
-                            nodeConnection.PlanId = null;
-                            nodeConnection.SaveAsync();
-                            break;
-                        }
-                    }
-                }
+                    IEnumerable<HouseParseObject> houseObjects = t3.Result;
+                    saveHouseObjects(houseObjects);
+                });
 
-            }    
+            });
         });
-
-        foreach (GameObject window in windowList)
+   }
+        
+    void saveNodes(IEnumerable<NodeParseObject> nodes)
+    {
+        print("NODE NODE NODE");
+        foreach (NodeParseObject node in nodes)
         {
-            var windowObject = new HouseParseObject();
-            windowObject.Name = window.name;
-            windowObject.Rotation = window.transform.rotation.z;
-            windowObject.Xpos = window.transform.position.x;
-            windowObject.Ypos = window.transform.position.y;
-            windowObject.Category = window.GetComponent<HouseObject>().category;
-            windowObject.PlanId = currentPlan;
-            windowObject.Isattached = true;
-            windowObject.SaveAsync();
+            nodeList.Add(node);
+            print("Added node to local " + nodeList.Last().Xpos);
         }
+    }
+        
+    void saveConnections(IEnumerable<NodeConnection> nodeConnections)
+    {
+        print("How many connections? " + nodeConnections.Count());
 
-        foreach (GameObject houseObject in objectList)
+        foreach (NodeConnection nodeConnection in nodeConnections)
         {
-            var houseParseObject = new HouseParseObject();
-            houseParseObject.Name =  houseObject.name;
-            houseParseObject.Rotation = houseObject.transform.rotation.z;
-            houseParseObject.Xpos = houseObject.transform.position.x;
-            houseParseObject.Ypos = houseObject.transform.position.y;
-            houseParseObject.Category = houseObject.GetComponent<HouseObject>().category;
-            houseParseObject.PlanId = currentPlan;
-            houseParseObject.Isattached = false;
-            houseParseObject.SaveAsync();
+            connectionList.Add(nodeConnection);
+            print("Added connection to local " + nodeConnection.StartNode.ObjectId + " " + nodeConnection.StartNode.Xpos);
         }
-    }*/
+    }
+
+    void saveHouseObjects(IEnumerable<HouseParseObject> houseObjects)
+    {
+        foreach (HouseParseObject houseObject in houseObjects)
+        {
+            if (houseObject.Isattached)
+            {
+                print("Added window to local");
+                windowList.Add(houseObject);
+            } else
+            { 
+                print("Added house object to local " + houseObject.Xpos);
+                houseObjectList.Add(houseObject);
+            }
+        }
+        didLoadAll = true;
+    }
+
+    IEnumerator save3DToParse(List<HouseParseObject> objectList, Plan currentPlan)
+    {
+        yield return null;
+    }
 
     IEnumerator saveToParse(List<GameObject> nodeList, List<GameObject> windowList, List<GameObject> objectList, Plan currentPlan)
     {
@@ -261,9 +232,6 @@ public class ClickManager : MonoBehaviour {
             windowObject.Category = window.GetComponent<HouseObject>().category;
             windowObject.PlanId = currentPlan;
             windowObject.Isattached = true;
-            windowObject.Length = window.GetComponent<WallAttachableObject>().length;
-            windowObject.Height = window.GetComponent<WallAttachableObject>().height;
-            windowObject.Elevation = window.GetComponent<WallAttachableObject>().elevation;
             windowObject.SaveAsync();
         }
 

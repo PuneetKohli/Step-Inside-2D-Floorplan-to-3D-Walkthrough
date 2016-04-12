@@ -12,25 +12,48 @@ public class HouseParseObject : ParseObject
     }
 
     [ParseFieldName("rotation")]
-    public double Rotation
+    public float Rotation
     {
-        get { return GetProperty<double>("Rotation"); }
-        set { SetProperty<double>(value, "Rotation"); }
+        get { return GetProperty<float>("Rotation"); }
+        set { SetProperty<float>(value, "Rotation"); }
     }
 
     [ParseFieldName("xpos")]
-    public double Xpos
+    public float Xpos
     {
-        get { return GetProperty<double>("Xpos"); }
-        set { SetProperty<double>(value, "Xpos"); }
+        get { return GetProperty<float>("Xpos"); }
+        set { SetProperty<float>(value, "Xpos"); }
     }
 
     [ParseFieldName("ypos")]
-    public double Ypos
+    public float Ypos
     {
-        get { return GetProperty<double>("Ypos"); }
-        set { SetProperty<double>(value, "Ypos"); }
+        get { return GetProperty<float>("Ypos"); }
+        set { SetProperty<float>(value, "Ypos"); }
     }
+
+    [ParseFieldName("elevation")]
+    public float Elevation
+    {
+        get { return GetProperty<float>("Elevation"); }
+        set { SetProperty<float>(value, "Elevation"); }
+    }
+
+    [ParseFieldName("length")]
+    public float Length
+    {
+        get { return GetProperty<float>("Length"); }
+        set { SetProperty<float>(value, "Length"); }
+    }
+
+    [ParseFieldName("height")]
+    public float Height
+    {
+        get { return GetProperty<float>("Height"); }
+        set { SetProperty<float>(value, "Height"); }
+    }
+
+
 
     [ParseFieldName("category")]
     public string Category
