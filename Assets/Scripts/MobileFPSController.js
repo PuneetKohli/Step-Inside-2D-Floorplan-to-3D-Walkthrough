@@ -8,7 +8,6 @@ private var thisTransform : Transform;
 private var character : CharacterController;
 private var cameraVelocity : Vector3;
 private var velocity : Vector3;
-private var canJump = true;
  
 var movementOriginX : float;
 var movementOriginY : float;
@@ -23,8 +22,6 @@ function Start ()
     moveOutline = new GameObject();
     movePad.transform.position = new Vector2(-1,-1);
     moveOutline.transform.position = new Vector2(-1,-1);
-    jump = false;
-    doubleJump = false;
 }
  
 function Update ()
@@ -101,34 +98,7 @@ function Update ()
     moveDirection *= speed;
     moveDirection += Physics.gravity;
    
-    if (character.isGrounded)
-    {
-        doubleJump = false;
-        if (jump || jumpingEnabled)
-        {
-            velocityJ = character.velocity / 3;
-            velocityJ.y = jumpSpeed;
-        }
-        else
-        {
-            velocityJ = new Vector3(0, 0, 0);
-        }
-    }
-    else
-    {
-        if (!doubleJump || jump || doubleJumpingEnabled)
-        {
-            velocityJ = character.velocity / 3;
-            velocityJ.y = jumpSpeed;
-            doubleJump = true;
-        }
-        velocityJ.y += Physics.gravity.y * Time.smoothDeltaTime;
-    }
-   
-    moveDirection += velocityJ;
-   
     character.Move(moveDirection * Time.smoothDeltaTime);
-    jump = false;
 }
  
 var rightFingerID;
@@ -141,7 +111,6 @@ var rightFingerInput : Vector2;
  
 public var moveOutline : GameObject;
 public var movePad : GameObject;
-public var jumpButton : GameObject;
  
 var rotationX : float;
 var rotationY : float;
@@ -150,10 +119,3 @@ var maximumY = 20;
  
 var originalRotation : float;
 var moveDirection : Vector3;
-var jump : boolean;
-var doubleJump : boolean;
- 
-var jumpSpeed : float = 25;
-var velocityJ : Vector3;
-var doubleJumpingEnabled : boolean = true;
-var jumpingEnabled : boolean = true;

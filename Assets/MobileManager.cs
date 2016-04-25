@@ -23,7 +23,8 @@ public class MobileManager : MonoBehaviour {
     WallManager wallManager;
     GameObject _3DRoot, _2DRoot;
     Transform _3DUIRoot, _2DUIRoot;
-    GameObject player, isoCam;
+    GameObject player, isoCam, uiCam;
+    GameObject walkthroughCam, vrCam;
     GameObject mainMenuScrollView, submenu;
     WallGenerator wallGenerator;
     bool didLoadAll = false;
@@ -42,6 +43,11 @@ public class MobileManager : MonoBehaviour {
         wallGenerator = _3DRoot.GetComponent<WallGenerator>();
         isoCam = _3DRoot.transform.Find("Isocam").gameObject as GameObject;
         player = _3DRoot.transform.Find("Player").gameObject as GameObject;
+        uiCam = transform.Find("Camera").gameObject as GameObject;
+        walkthroughCam = player.transform.Find("MainCamera").gameObject as GameObject;
+        vrCam = player.transform.Find("CardboardMain").gameObject as GameObject;
+
+        vrCam.SetActive(false);
 
         itemNames = new string[] { "windows & door", "table", "bed", "chair"};
         windowsanddoorNames = new string[]{ "door1", "door2", "window1", "window2"};
@@ -67,6 +73,15 @@ public class MobileManager : MonoBehaviour {
             didGenerate = true;
             wallGenerator.generate3DFromParse(connectionList, houseObjectList, windowList);
         }    
+
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            if (vrCam.activeInHierarchy)
+            {
+                ClickedBackFromVR();
+            }
+        }
+
     }
 
     public void ClickedWalkthrough(GameObject g)
@@ -75,6 +90,7 @@ public class MobileManager : MonoBehaviour {
         {
             g.GetComponent<UILabel>().text = "Top View";
             EnablePlayerCam();
+            player.GetComponent<CharacterController>().enabled = true;
         } else
         {
             g.GetComponent<UILabel>().text = "Walkthrough";
@@ -85,6 +101,26 @@ public class MobileManager : MonoBehaviour {
     public void ClickedBack()
     {
         SceneManager.LoadScene(0);
+    }
+
+    public void ClickedVR()
+    {
+        EnablePlayerCam();
+        player.GetComponent<CharacterController>().enabled = false;
+        walkthroughCam.SetActive(false);
+        vrCam.SetActive(true);
+        player.GetComponent<VRClickScript>().enabled = true;
+        uiCam.SetActive(false);
+    }
+
+    public void ClickedBackFromVR()
+    {
+        EnablePlayerCam();
+        player.GetComponent<CharacterController>().enabled = true;
+        walkthroughCam.SetActive(true);
+        vrCam.SetActive(false);
+        player.GetComponent<VRClickScript>().enabled = false;
+        uiCam.SetActive(true);
     }
 
     void EnableIsoCam()
@@ -261,4 +297,5 @@ public class MobileManager : MonoBehaviour {
             houseParseObject.SaveAsync();
         }
     }
+       
 }

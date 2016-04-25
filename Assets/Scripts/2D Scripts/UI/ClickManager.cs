@@ -125,6 +125,14 @@ public class ClickManager : MonoBehaviour {
 
     public void ClickedClear()
     {
+        Plan newPlan = new Plan(); 
+        didGetObjectID = false;
+        didSetLabel = false;
+        newPlan.SaveAsync().ContinueWith( t => {
+            planObjectID = newPlan.ObjectId;
+            didGetObjectID = true;
+            print ("Object id of plan is " + planObjectID);
+        });
         wallManager.Refresh();
     }
 
