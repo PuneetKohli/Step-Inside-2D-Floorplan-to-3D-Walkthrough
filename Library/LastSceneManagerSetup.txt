@@ -1,0 +1,4 @@
+sceneSetups:
+- path: Assets/Scenes/nguiTest.unity
+  isLoaded: 1
+  isActive: 1
